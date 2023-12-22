@@ -11,6 +11,12 @@ class Time {
   using Clock = std::chrono::system_clock;
   using TimePoint = Clock::time_point;
 
+  constexpr static int64_t kMillisecondsPerSecond = 1000ll;
+  constexpr static int64_t kMicrosecondsPerSecond =
+      1000 * kMillisecondsPerSecond;
+  constexpr static int64_t kNanoSecondsPerSecond =
+      1000 * kMicrosecondsPerSecond;
+
   struct Exploded {
     int year;         // 20xx
     int month;        // (1-12)
@@ -53,6 +59,8 @@ class Time {
   }
   constexpr time_t toTimeT() const { return timeSinceEpochSeconds(); }
 
+  struct timespec toTimespec();
+
   template <typename Duration>
   constexpr Time operator+(Duration duration) const {
     return Time(timePoint_ + duration);
@@ -88,8 +96,6 @@ class Time {
   std::string dump(bool isLocal = true) const;
 
  private:
-  constexpr static int64_t kMillisecondsPerSecond = 1000;
-
   static bool fromExploded(bool isLocal, const Exploded& exploded, Time* time);
 
   void exploded(Exploded* ex, bool local) const;

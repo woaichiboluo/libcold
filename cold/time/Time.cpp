@@ -1,5 +1,7 @@
 #include "cold/time/Time.h"
 
+#include <bits/types/struct_timespec.h>
+
 #include <cassert>
 #include <cstdio>
 #include <ctime>
@@ -64,6 +66,16 @@ std::string Time::dump(bool isLocal) const {
                ex.month, ex.day, ex.hour, ex.minute, ex.second, ex.millisecond);
   assert(ret > 0);
   return {buf, static_cast<size_t>(ret)};
+}
+
+struct timespec Time::toTimespec() {
+  struct timespec ts;
+  using std::chrono::duration_cast;
+  using std::chrono::nanoseconds;
+  auto nano = duration_cast<nanoseconds>(timePoint_.time_since_epoch()).count();
+  ts.tv_sec = nano / Time::kNanoSecondsPerSecond;
+  ts.tv_nsec = nano - ts.tv_sec * Time::kNanoSecondsPerSecond;
+  return ts;
 }
 
 }  // namespace Cold::Base
