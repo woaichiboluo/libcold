@@ -14,3 +14,4 @@ build
 .cache
 out
 CMakeSettings.json
+.vs
