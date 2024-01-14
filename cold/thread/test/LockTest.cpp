@@ -8,32 +8,33 @@ using namespace Cold;
 
 Base::Mutex g_mutex;
 Base::SharedMutex g_sharedMutex;
-int c GUARDED_BY(g_mutex) = 0;
+int b GUARDED_BY(g_mutex) = 0;
+int c GUARDED_BY(g_sharedMutex) = 0;
 
 void count() {
   for (int i = 0; i < 1000; ++i) {
     Base::LockGuard guard(g_mutex);
-    ++c;
-    std::cout << c << " " << std::this_thread::get_id() << std::endl;
+    ++b;
+    std::cout << b << " " << std::this_thread::get_id() << std::endl;
   }
 }
 
 void count1() {
   for (int i = 0; i < 1000; ++i) {
-    g_mutex.lock();
+    g_mutex.Lock();
     Base::LockGuard guard(g_mutex, Base::AdoptLock);
-    ++c;
-    std::cout << c << " " << std::this_thread::get_id() << std::endl;
+    ++b;
+    std::cout << b << " " << std::this_thread::get_id() << std::endl;
   }
 }
 
 void count2() {
   Base::LockGuard guard(g_mutex, Base::DeferLock);
   for (int i = 0; i < 1000; ++i) {
-    guard.lock();
-    ++c;
-    std::cout << c << " " << std::this_thread::get_id() << std::endl;
-    guard.unlock();
+    guard.Lock();
+    ++b;
+    std::cout << b << " " << std::this_thread::get_id() << std::endl;
+    guard.Unlock();
   }
 }
 
@@ -59,23 +60,22 @@ void run(Runnable r) {
   Base::Thread t2(r);
   Base::Thread t3(r);
   Base::Thread t4(r);
-  t1.start();
-  t2.start();
-  t3.start();
-  t4.start();
-  t1.join();
-  t2.join();
-  t3.join();
-  t4.join();
+  t1.Start();
+  t2.Start();
+  t3.Start();
+  t4.Start();
+  t1.Join();
+  t2.Join();
+  t3.Join();
+  t4.Join();
 }
 
 int main() {
   run(count);
   run(count1);
   run(count2);
-  c = 0;
   Base::Thread t1(count4);
-  t1.start();
+  t1.Start();
   run(count3);
-  t1.join();
+  t1.Join();
 }

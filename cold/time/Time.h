@@ -17,7 +17,7 @@ class Time {
   constexpr static int64_t kNanoSecondsPerSecond =
       1000 * kMicrosecondsPerSecond;
 
-  struct Exploded {
+  struct TimeExploded {
     int year;         // 20xx
     int month;        // (1-12)
     int day;          // 1-based day of month (1-31)
@@ -33,52 +33,52 @@ class Time {
   constexpr explicit Time(TimePoint p) : timePoint_(p) {}
   ~Time() = default;
 
-  static Time now() { return Time(Clock::now()); }
+  static Time Now() { return Time(Clock::now()); }
 
-  static Time fromTimeT(time_t t) { return Time(Clock::from_time_t(t)); }
+  static Time FromTimeT(time_t t) { return Time(Clock::from_time_t(t)); }
 
-  static bool fromUTCExplode(const Exploded& ex, Time* time) {
-    return fromExploded(false, ex, time);
+  static bool FromUTCExplode(const TimeExploded& ex, Time* time) {
+    return FromExploded(false, ex, time);
   }
-  static bool fromLocalExplode(const Exploded& ex, Time* time) {
-    return fromExploded(true, ex, time);
+  static bool FromLocalExplode(const TimeExploded& ex, Time* time) {
+    return FromExploded(true, ex, time);
   }
 
-  void UTCExplode(Exploded* ex) const { exploded(ex, false); }
-  void localExplode(Exploded* ex) const { exploded(ex, true); }
+  void UTCExplode(TimeExploded* ex) const { Exploded(ex, false); }
+  void LocalExplode(TimeExploded* ex) const { Exploded(ex, true); }
 
   // time since epoch
-  auto timeSinceEpochDuration() const { return timePoint_.time_since_epoch(); }
-  constexpr int64_t timeSinceEpochSeconds() const {
+  auto TimeSinceEpochDuration() const { return timePoint_.time_since_epoch(); }
+  constexpr int64_t TimeSinceEpochSeconds() const {
     using namespace std::chrono;
     return duration_cast<seconds>(timePoint_.time_since_epoch()).count();
   }
-  constexpr int64_t timeSinceEpochMilliSeconds() const {
+  constexpr int64_t TimeSinceEpochMilliSeconds() const {
     using namespace std::chrono;
     return duration_cast<milliseconds>(timePoint_.time_since_epoch()).count();
   }
-  constexpr time_t toTimeT() const { return timeSinceEpochSeconds(); }
+  constexpr time_t ToTimeT() const { return TimeSinceEpochSeconds(); }
 
-  struct timespec toTimespec();
+  struct timespec ToTimespec();
 
-  template <typename Duration>
-  constexpr Time operator+(Duration duration) const {
+  template <typename Rep, class Period>
+  constexpr Time operator+(std::chrono::duration<Rep, Period> duration) const {
     return Time(timePoint_ + duration);
   }
 
-  template <typename Duration>
-  constexpr Time operator-(Duration duration) const {
+  template <typename Rep, class Period>
+  constexpr Time operator-(std::chrono::duration<Rep, Period> duration) const {
     return Time(timePoint_ - duration);
   }
 
-  template <typename Duration>
-  constexpr Time& operator+=(Duration duration) {
+  template <typename Rep, class Period>
+  constexpr Time& operator+=(std::chrono::duration<Rep, Period> duration) {
     timePoint_ += duration;
     return *this;
   }
 
-  template <typename Duration>
-  constexpr Time& operator-=(Duration duration) {
+  template <typename Rep, class Period>
+  constexpr Time& operator-=(std::chrono::duration<Rep, Period> duration) {
     timePoint_ -= duration;
     return *this;
   }
@@ -89,16 +89,17 @@ class Time {
 
   constexpr auto operator<=>(const Time&) const = default;
 
-  constexpr TimePoint getStdTimePoint() const { return timePoint_; }
+  constexpr TimePoint GetStdTimePoint() const { return timePoint_; }
 
   // without cache
   // debug use,log don't use this
-  std::string dump(bool isLocal = true) const;
+  std::string Dump(bool isLocal = true) const;
 
  private:
-  static bool fromExploded(bool isLocal, const Exploded& exploded, Time* time);
+  static bool FromExploded(bool isLocal, const TimeExploded& exploded,
+                           Time* time);
 
-  void exploded(Exploded* ex, bool local) const;
+  void Exploded(TimeExploded* ex, bool local) const;
 
   TimePoint timePoint_;
 };  // class Time

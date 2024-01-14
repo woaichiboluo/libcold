@@ -15,7 +15,7 @@ namespace Cold::Base {
 namespace internal {
 
 template <typename T>
-std::vector<T> split(std::string_view content, std::string_view separator) {
+std::vector<T> Split(std::string_view content, std::string_view separator) {
   std::vector<T> res;
   if (content.empty()) return res;
 
@@ -35,15 +35,15 @@ std::vector<T> split(std::string_view content, std::string_view separator) {
 
 }  // namespace internal
 
-[[nodiscard]] std::vector<std::string_view> splitToStringView(
+[[nodiscard]] std::vector<std::string_view> SplitToStringView(
     std::string_view content, std::string_view separator);
 
-[[nodiscard]] std::vector<std::string> splitToString(
+[[nodiscard]] std::vector<std::string> SplitToString(
     std::string_view content, std::string_view separator);
 
 //将字符串转换为整形
 template <typename NumberType>
-[[nodiscard]] bool strToInt(
+[[nodiscard]] bool StrToInt(
     std::string_view str, NumberType* pointer,
     int base = 10) requires std::is_integral_v<NumberType> {
   assert(2 <= base && base <= 35);
@@ -56,7 +56,7 @@ template <typename NumberType>
 
 //将字符串转换为浮点数
 template <typename NumberType>
-[[nodiscard]] bool strToFloat(
+[[nodiscard]] bool StrToFloat(
     std::string_view str, NumberType* pointer, int precision = 2,
     std::chars_format format = std::chars_format::fixed) requires
     std::is_floating_point_v<NumberType> {
@@ -70,7 +70,7 @@ template <typename NumberType>
 
 //把整数转换为字符串(非补码)
 template <typename NumberType>
-[[nodiscard]] std::string intToStr(
+[[nodiscard]] std::string IntToStr(
     NumberType number, int base = 10) requires std::is_integral_v<NumberType> {
   char buf[128];
   assert(2 <= base && base <= 35);
@@ -81,7 +81,7 @@ template <typename NumberType>
 
 //获取整数的byte串
 template <typename NumberType>
-[[nodiscard]] std::string numberToInternalByteStr(
+[[nodiscard]] std::string NumberToInternalByteStr(
     NumberType number, bool needPrefix = false,
     bool pad = false) requires std::is_integral_v<NumberType> {
   constexpr size_t bitLens = sizeof(NumberType) * 8;
@@ -106,7 +106,7 @@ template <typename NumberType>
 
 //获取整数的hex串
 template <typename NumberType>
-[[nodiscard]] std::string numberToInternalHexStr(
+[[nodiscard]] std::string NumberToInternalHexStr(
     NumberType number, bool needPrefix = false,
     bool pad = false) requires std::is_integral_v<NumberType> {
   constexpr size_t hexLens = sizeof(NumberType) * 2;
@@ -134,7 +134,7 @@ template <typename NumberType>
 //有可能出现 std::errc::value_to_large
 //出错时返回空串
 template <typename NumberType>
-[[nodiscard]] std::string floatToStr(
+[[nodiscard]] std::string FloatToStr(
     NumberType number, int precision = 2,
     std::chars_format format = std::chars_format::fixed) requires
     std::is_floating_point_v<NumberType> {
@@ -151,14 +151,14 @@ template <typename NumberType>
 
 //把指针按16进制输出
 template <typename T>
-[[nodiscard]] std::string pointerToStr(T* pointer, bool pad = true) {
-  return numberToInternalHexStr(reinterpret_cast<uintptr_t>(pointer), true,
+[[nodiscard]] std::string PointerToStr(T* pointer, bool pad = true) {
+  return NumberToInternalHexStr(reinterpret_cast<uintptr_t>(pointer), true,
                                 true);
 }
 
-[[nodiscard]] std::string_view trimToStringView(std::string_view str,
+[[nodiscard]] std::string_view TrimToStringView(std::string_view str,
                                                 char delim = ' ');
-[[nodiscard]] std::string trimToString(std::string_view str, char delim = ' ');
+[[nodiscard]] std::string TrimToString(std::string_view str, char delim = ' ');
 
 }  // namespace Cold::Base
 

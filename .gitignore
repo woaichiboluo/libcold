@@ -13,4 +13,4 @@ build
 .vscode
 .cache
 out
-/CMakeSettings.json
+CMakeSettings.json

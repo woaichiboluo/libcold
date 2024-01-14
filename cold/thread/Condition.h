@@ -19,23 +19,23 @@ class Condition {
   Condition(const Condition&) = delete;
   Condition& operator=(const Condition&) = delete;
 
-  void wait() { pthread_cond_wait(&cond_, mutex_.nativeHandle()); }
+  void Wait() { pthread_cond_wait(&cond_, mutex_.NativeHandle()); }
 
-  template <typename Duration>
-  void waitFor(Duration duration) {
-    waitUntil(Time::now() + duration);
+  template <typename Rep, typename Period>
+  void WaitFor(std::chrono::duration<Rep, Period> duration) {
+    WaitUntil(Time::Now() + duration);
   }
 
-  void waitUntil(Time time) {
-    if (time <= Time::now()) return;
-    auto ts = time.toTimespec();
-    pthread_cond_timedwait(&cond_, mutex_.nativeHandle(), &ts);
+  void WaitUntil(Time time) {
+    if (time <= Time::Now()) return;
+    auto ts = time.ToTimespec();
+    pthread_cond_timedwait(&cond_, mutex_.NativeHandle(), &ts);
   }
 
-  void notifyOne() { pthread_cond_signal(&cond_); }
-  void notifyAll() { pthread_cond_broadcast(&cond_); }
+  void NotifyOne() { pthread_cond_signal(&cond_); }
+  void NotifyAll() { pthread_cond_broadcast(&cond_); }
 
-  pthread_cond_t* nativeHandle() { return &cond_; }
+  pthread_cond_t* NativeHandle() { return &cond_; }
 
  private:
   Mutex& mutex_;

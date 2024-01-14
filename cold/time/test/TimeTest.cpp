@@ -11,29 +11,29 @@ using namespace Cold::Base;
 TEST_CASE("default constructor") {
   using namespace std::chrono;
   Time t;
-  CHECK(duration_cast<seconds>(t.timeSinceEpochDuration()).count() == 0);
-  CHECK(t.getStdTimePoint() == system_clock::time_point());
-  CHECK(t.timeSinceEpochSeconds() == 0);
-  CHECK(t.dump(false) == "1970-01-01 00:00:00.000");
+  CHECK(duration_cast<seconds>(t.TimeSinceEpochDuration()).count() == 0);
+  CHECK(t.GetStdTimePoint() == system_clock::time_point());
+  CHECK(t.TimeSinceEpochSeconds() == 0);
+  CHECK(t.Dump(false) == "1970-01-01 00:00:00.000");
 }
 
 TEST_CASE("time_t convert") {
-  CHECK(Time::fromTimeT(100).toTimeT() == 100);
-  CHECK(Time::fromTimeT(0).toTimeT() == 0);
-  CHECK(Time().toTimeT() == 0);
+  CHECK(Time::FromTimeT(100).ToTimeT() == 100);
+  CHECK(Time::FromTimeT(0).ToTimeT() == 0);
+  CHECK(Time().ToTimeT() == 0);
 }
 
 TEST_CASE("test operator") {
   using namespace std::chrono;
-  auto t = Time::now();
-  auto d = t.timeSinceEpochDuration();
-  CHECK(d + seconds(5) == (t + seconds(5)).timeSinceEpochDuration());
+  auto t = Time::Now();
+  auto d = t.TimeSinceEpochDuration();
+  CHECK(d + seconds(5) == (t + seconds(5)).TimeSinceEpochDuration());
   CHECK(d + nanoseconds(100) ==
-        (t + nanoseconds(100)).timeSinceEpochDuration());
+        (t + nanoseconds(100)).TimeSinceEpochDuration());
   CHECK(d + milliseconds(100) ==
-        (t + milliseconds(100)).timeSinceEpochDuration());
+        (t + milliseconds(100)).TimeSinceEpochDuration());
   CHECK(d + microseconds(100) ==
-        (t + microseconds(100)).timeSinceEpochDuration());
+        (t + microseconds(100)).TimeSinceEpochDuration());
   auto n = seconds(20) + t;
   CHECK(t < n);
   CHECK(t <= n);
@@ -51,8 +51,8 @@ TEST_CASE("utc explode") {
   auto t = time(nullptr);
   struct tm tt;
   gmtime_r(&t, &tt);
-  Time::Exploded ex;
-  Time::fromTimeT(t).UTCExplode(&ex);
+  Time::TimeExploded ex;
+  Time::FromTimeT(t).UTCExplode(&ex);
   CHECK(ex.year == tt.tm_year + 1900);
   CHECK(ex.month == tt.tm_mon + 1);
   CHECK(ex.day == tt.tm_mday);
@@ -60,16 +60,16 @@ TEST_CASE("utc explode") {
   CHECK(ex.minute == tt.tm_min);
   CHECK(ex.second == tt.tm_sec);
   Time l;
-  CHECK(Time::fromUTCExplode(ex, &l) == true);
-  CHECK(l.toTimeT() == t);
+  CHECK(Time::FromUTCExplode(ex, &l) == true);
+  CHECK(l.ToTimeT() == t);
 }
 
 TEST_CASE("local explode") {
   auto t = time(nullptr);
   struct tm tt;
   localtime_r(&t, &tt);
-  Time::Exploded ex;
-  Time::fromTimeT(t).localExplode(&ex);
+  Time::TimeExploded ex;
+  Time::FromTimeT(t).LocalExplode(&ex);
   CHECK(ex.year == tt.tm_year + 1900);
   CHECK(ex.month == tt.tm_mon + 1);
   CHECK(ex.day == tt.tm_mday);
@@ -77,12 +77,12 @@ TEST_CASE("local explode") {
   CHECK(ex.minute == tt.tm_min);
   CHECK(ex.second == tt.tm_sec);
   Time l;
-  CHECK(Time::fromLocalExplode(ex, &l) == true);
-  CHECK(l.toTimeT() == t);
+  CHECK(Time::FromLocalExplode(ex, &l) == true);
+  CHECK(l.ToTimeT() == t);
 }
 
 TEST_CASE("from utc explode") {
-  Time::Exploded ex{};
+  Time::TimeExploded ex{};
   ex.year = 2023;
   ex.month = 11;
   ex.day = 12;
@@ -90,9 +90,9 @@ TEST_CASE("from utc explode") {
   ex.minute = 11;
   ex.second = 11;
   Time time;
-  CHECK(Time::fromUTCExplode(ex, &time) == true);
-  CHECK(time.dump(false) == "2023-11-12 11:11:11.000");
-  Time::Exploded ex1{};
+  CHECK(Time::FromUTCExplode(ex, &time) == true);
+  CHECK(time.Dump(false) == "2023-11-12 11:11:11.000");
+  Time::TimeExploded ex1{};
   time.UTCExplode(&ex1);
   CHECK(ex.year == ex1.year);
   CHECK(ex.month == ex1.month);
@@ -106,7 +106,7 @@ TEST_CASE("from utc explode") {
 }
 
 TEST_CASE("from local explode") {
-  Time::Exploded ex{};
+  Time::TimeExploded ex{};
   ex.year = 2023;
   ex.month = 11;
   ex.day = 11;
@@ -114,11 +114,11 @@ TEST_CASE("from local explode") {
   ex.minute = 11;
   ex.second = 11;
   Time time;
-  CHECK(Time::fromLocalExplode(ex, &time) == true);
-  CHECK(time.dump() == "2023-11-11 11:11:11.000");
+  CHECK(Time::FromLocalExplode(ex, &time) == true);
+  CHECK(time.Dump() == "2023-11-11 11:11:11.000");
 
-  Time::Exploded ex1{};
-  time.localExplode(&ex1);
+  Time::TimeExploded ex1{};
+  time.LocalExplode(&ex1);
   CHECK(ex.year == ex1.year);
   CHECK(ex.month == ex1.month);
   CHECK(ex.day == ex1.day);

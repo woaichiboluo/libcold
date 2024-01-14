@@ -10,9 +10,9 @@
 namespace Cold::Base {
 
 namespace ThisThread {
-pid_t threadId();
-const std::string& threadIdStr();
-const std::string& threadName();
+pid_t ThreadId();
+const std::string& ThreadIdStr();
+const std::string& ThreadName();
 }  // namespace ThisThread
 
 class Thread {
@@ -25,18 +25,18 @@ class Thread {
   Thread(const Thread&) = delete;
   Thread& operator=(const Thread&) = delete;
 
-  void start();
-  void join();
-  void detach();
+  void Start();
+  void Join();
+  void Detach();
 
-  bool started() const { return started_; }
-  bool joinable() const { return started_ && !joined_; }
+  bool Started() const { return started_; }
+  bool Joinable() const { return started_ && !joined_; }
 
-  pid_t getThreadId() const { return threadId_; }
-  const std::string& getThreadName() const { return threadName_; }
+  pid_t GetThreadId() const { return threadId_; }
+  const std::string& GetThreadName() const { return threadName_; }
 
  private:
-  static void* threadMainFunc(void* arg);
+  static void* ThreadMainFunc(void* arg);
   static std::atomic<int> numCreated_;
 
   ThreadTask task_;

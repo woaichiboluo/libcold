@@ -75,22 +75,15 @@ class CAPABILITY("mutex") Mutex {
   Mutex(const Mutex &) = delete;
   Mutex &operator=(const Mutex &) = delete;
 
-  void lock() ACQUIRE() { pthread_mutex_lock(&mutex_); }
+  void Lock() ACQUIRE() { pthread_mutex_lock(&mutex_); }
 
-  void unlock() RELEASE() { pthread_mutex_unlock(&mutex_); }
+  void Unlock() RELEASE() { pthread_mutex_unlock(&mutex_); }
 
-  bool trylock() TRY_ACQUIRE(true) {
+  bool Trylock() TRY_ACQUIRE(true) {
     return pthread_mutex_trylock(&mutex_) == 0;
   }
 
-  pthread_mutex_t *nativeHandle() { return &mutex_; }
-
-  void ReaderLock() ACQUIRE_SHARED();
-  void ReaderUnlock() RELEASE_SHARED();
-  void GenericUnlock() RELEASE_GENERIC();
-  bool ReaderTryLock() TRY_ACQUIRE_SHARED(true);
-  void AssertHeld() ASSERT_CAPABILITY(this);
-  void AssertReaderHeld() ASSERT_SHARED_CAPABILITY(this);
+  pthread_mutex_t *NativeHandle() { return &mutex_; }
 
  private:
   pthread_mutex_t mutex_;
@@ -104,15 +97,15 @@ class CAPABILITY("spinlock") SpinLock {
   SpinLock(const SpinLock &) = delete;
   SpinLock &operator=(const SpinLock &) = delete;
 
-  void lock() ACQUIRE() { pthread_spin_lock(&spinlock_); }
+  void Lock() ACQUIRE() { pthread_spin_lock(&spinlock_); }
 
-  void unlock() RELEASE() { pthread_spin_unlock(&spinlock_); }
+  void Unlock() RELEASE() { pthread_spin_unlock(&spinlock_); }
 
-  bool trylock() TRY_ACQUIRE(true) {
+  bool Trylock() TRY_ACQUIRE(true) {
     return pthread_spin_trylock(&spinlock_) == 0;
   }
 
-  pthread_spinlock_t *nativeHandle() { return &spinlock_; }
+  pthread_spinlock_t *NativeHandle() { return &spinlock_; }
 
  private:
   pthread_spinlock_t spinlock_;
@@ -126,23 +119,23 @@ class CAPABILITY("SharedMutex") SharedMutex {
   SharedMutex(const SharedMutex &) = delete;
   SharedMutex &operator=(const SharedMutex &) = delete;
 
-  void lock() ACQUIRE() { pthread_rwlock_wrlock(&rwlock_); }
+  void Lock() ACQUIRE() { pthread_rwlock_wrlock(&rwlock_); }
 
-  void unlock() RELEASE() { pthread_rwlock_unlock(&rwlock_); }
+  void Unlock() RELEASE() { pthread_rwlock_unlock(&rwlock_); }
 
-  bool trylock() TRY_ACQUIRE(true) {
+  bool Trylock() TRY_ACQUIRE(true) {
     return pthread_rwlock_trywrlock(&rwlock_) == 0;
   }
 
-  void readerLock() ACQUIRE_SHARED() { pthread_rwlock_rdlock(&rwlock_); }
+  void ReaderLock() ACQUIRE_SHARED() { pthread_rwlock_rdlock(&rwlock_); }
 
-  void readerUnlock() RELEASE_SHARED() { pthread_rwlock_unlock(&rwlock_); }
+  void ReaderUnlock() RELEASE_SHARED() { pthread_rwlock_unlock(&rwlock_); }
 
-  bool readerTryLock() TRY_ACQUIRE_SHARED(true) {
+  bool ReaderTryLock() TRY_ACQUIRE_SHARED(true) {
     return pthread_rwlock_tryrdlock(&rwlock_) == 0;
   }
 
-  pthread_rwlock_t *nativeHandle() { return &rwlock_; }
+  pthread_rwlock_t *NativeHandle() { return &rwlock_; }
 
  private:
   pthread_rwlock_t rwlock_;
@@ -157,15 +150,16 @@ struct SharedLockType {
 } inline constexpr SharedLock = {};
 
 template <typename T>
-requires(std::is_same_v<T, Mutex> || std::is_same_v<T, SpinLock> ||
-         std::is_same_v<T, SharedMutex>) class SCOPED_CAPABILITY LockGuard {
+  requires(std::is_same_v<T, Mutex> || std::is_same_v<T, SpinLock> ||
+           std::is_same_v<T, SharedMutex>)
+class SCOPED_CAPABILITY LockGuard {
  public:
   explicit LockGuard(T &lock) ACQUIRE(lock) : lock_(lock), locked_(true) {
-    lock_.lock();
+    lock_.Lock();
   };
 
   ~LockGuard() RELEASE() {
-    if (locked_) lock_.unlock();
+    if (locked_) lock_.Unlock();
   }
 
   LockGuard(const LockGuard &) = delete;
@@ -180,15 +174,15 @@ requires(std::is_same_v<T, Mutex> || std::is_same_v<T, SpinLock> ||
   LockGuard(T &lock, DeferLockType) EXCLUDES(lock)
       : lock_(lock), locked_(false) {}
 
-  void lock() ACQUIRE() {
-    lock_.lock();
+  void Lock() ACQUIRE() {
+    lock_.Lock();
     locked_ = true;
   }
 
-  bool trylock() TRY_ACQUIRE(true) { return locked_ = lock_.trylock(); }
+  bool Trylock() TRY_ACQUIRE(true) { return locked_ = lock_.Trylock(); }
 
-  void unlock() RELEASE() {
-    lock_.unlock();
+  void Unlock() RELEASE() {
+    lock_.Unlock();
     locked_ = false;
   }
 
@@ -202,11 +196,11 @@ class SCOPED_CAPABILITY LockGuard<SharedMutex> {
  public:
   explicit LockGuard(SharedMutex &lock) ACQUIRE(lock)
       : lock_(lock), locked_(true) {
-    lock_.lock();
+    lock_.Lock();
   };
 
   ~LockGuard() RELEASE() {
-    if (locked_) lock_.unlock();
+    if (locked_) lock_.Unlock();
   }
 
   LockGuard(const LockGuard &) = delete;
@@ -217,7 +211,7 @@ class SCOPED_CAPABILITY LockGuard<SharedMutex> {
 
   LockGuard(SharedMutex &lock, SharedLockType) ACQUIRE_SHARED(lock)
       : lock_(lock), locked_(true) {
-    lock_.readerLock();
+    lock_.ReaderLock();
   }
 
   LockGuard(SharedMutex &lock, AdoptLockType, SharedLockType)
@@ -227,29 +221,29 @@ class SCOPED_CAPABILITY LockGuard<SharedMutex> {
   LockGuard(SharedMutex &lock, DeferLockType) EXCLUDES(lock)
       : lock_(lock), locked_(false) {}
 
-  void lock() ACQUIRE() {
-    lock_.lock();
+  void Lock() ACQUIRE() {
+    lock_.Lock();
     locked_ = true;
   }
 
-  bool trylock() TRY_ACQUIRE(true) { return locked_ = lock_.trylock(); }
+  bool Trylock() TRY_ACQUIRE(true) { return locked_ = lock_.Trylock(); }
 
-  void readerLock() ACQUIRE_SHARED() {
-    lock_.readerLock();
+  void ReaderLock() ACQUIRE_SHARED() {
+    lock_.ReaderLock();
     locked_ = true;
   }
 
-  bool readerTryLock() TRY_ACQUIRE_SHARED(true) {
-    return locked_ = lock_.readerTryLock();
+  bool ReaderTryLock() TRY_ACQUIRE_SHARED(true) {
+    return locked_ = lock_.ReaderTryLock();
   }
 
-  void unlock() RELEASE() {
-    lock_.unlock();
+  void Unlock() RELEASE() {
+    lock_.Unlock();
     locked_ = false;
   }
 
-  void readerUnlock() RELEASE() {
-    lock_.readerUnlock();
+  void ReaderUnlock() RELEASE() {
+    lock_.ReaderUnlock();
     locked_ = false;
   }
 

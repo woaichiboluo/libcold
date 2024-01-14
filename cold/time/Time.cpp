@@ -9,7 +9,7 @@
 
 namespace Cold::Base {
 
-bool Time::fromExploded(bool isLocal, const Exploded& ex, Time* time) {
+bool Time::FromExploded(bool isLocal, const TimeExploded& ex, Time* time) {
   struct tm t {};
   t.tm_year = ex.year - 1900;
   t.tm_mon = ex.month - 1;
@@ -24,14 +24,14 @@ bool Time::fromExploded(bool isLocal, const Exploded& ex, Time* time) {
   time_t seconds = 0;
   seconds = isLocal ? mktime(&t) : timegm(&t);
   if (seconds != -1) {
-    *time = Time::fromTimeT(seconds);
+    *time = Time::FromTimeT(seconds);
     return true;
   }
   return false;
 }
 
-void Time::exploded(Exploded* ex, bool isLocal) const {
-  const auto milliseconds = timeSinceEpochMilliSeconds();
+void Time::Exploded(TimeExploded* ex, bool isLocal) const {
+  const auto milliseconds = TimeSinceEpochMilliSeconds();
   int64_t seconds = milliseconds / kMillisecondsPerSecond;
   int64_t milli = milliseconds % kMillisecondsPerSecond;
 
@@ -53,11 +53,11 @@ void Time::exploded(Exploded* ex, bool isLocal) const {
   ex->millisecond = static_cast<int>(milli);
 }
 
-std::string Time::dump(bool isLocal) const {
-  Exploded ex;
+std::string Time::Dump(bool isLocal) const {
+  TimeExploded ex;
   char buf[64];
   if (isLocal) {
-    localExplode(&ex);
+    LocalExplode(&ex);
   } else {
     UTCExplode(&ex);
   }
@@ -68,7 +68,7 @@ std::string Time::dump(bool isLocal) const {
   return {buf, static_cast<size_t>(ret)};
 }
 
-struct timespec Time::toTimespec() {
+struct timespec Time::ToTimespec() {
   struct timespec ts;
   using std::chrono::duration_cast;
   using std::chrono::nanoseconds;

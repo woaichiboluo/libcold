@@ -7,10 +7,10 @@
 using namespace Cold;
 
 TEST_CASE("test main thread") {
-  CHECK(Base::ThisThread::threadName() == "main");
-  CHECK(Base::ThisThread::threadId() != 0);
-  CHECK(Base::ThisThread::threadIdStr() ==
-        Base::intToStr(Base::ThisThread::threadId()));
+  CHECK(Base::ThisThread::ThreadName() == "main");
+  CHECK(Base::ThisThread::ThreadId() != 0);
+  CHECK(Base::ThisThread::ThreadIdStr() ==
+        Base::IntToStr(Base::ThisThread::ThreadId()));
 }
 
 TEST_CASE("test detach") {
@@ -21,47 +21,47 @@ TEST_CASE("test detach") {
       t += seq;
     }
   });
-  CHECK(thread.getThreadName() == "Thread1");
-  CHECK(thread.getThreadId() == 0);
-  thread.start();
-  CHECK(thread.getThreadName() == "Thread1");
-  CHECK(thread.getThreadId() != 0);
+  CHECK(thread.GetThreadName() == "Thread1");
+  CHECK(thread.GetThreadId() == 0);
+  thread.Start();
+  CHECK(thread.GetThreadName() == "Thread1");
+  CHECK(thread.GetThreadId() != 0);
 }
 
 TEST_CASE("test multi thread") {
   Base::Thread t1([=]() {
-    CHECK(Base::ThisThread::threadName() == "Thread2");
-    CHECK(Base::ThisThread::threadId() != 0);
-    CHECK(Base::ThisThread::threadIdStr() ==
-          Base::intToStr(Base::ThisThread::threadId()));
+    CHECK(Base::ThisThread::ThreadName() == "Thread2");
+    CHECK(Base::ThisThread::ThreadId() != 0);
+    CHECK(Base::ThisThread::ThreadIdStr() ==
+          Base::IntToStr(Base::ThisThread::ThreadId()));
   });
   Base::Thread t2([=]() {
-    CHECK(Base::ThisThread::threadName() == "Thread3");
-    CHECK(Base::ThisThread::threadId() != 0);
-    CHECK(Base::ThisThread::threadIdStr() ==
-          Base::intToStr(Base::ThisThread::threadId()));
+    CHECK(Base::ThisThread::ThreadName() == "Thread3");
+    CHECK(Base::ThisThread::ThreadId() != 0);
+    CHECK(Base::ThisThread::ThreadIdStr() ==
+          Base::IntToStr(Base::ThisThread::ThreadId()));
   });
   Base::Thread t3(
       [=]() {
-        CHECK(Base::ThisThread::threadName() == "Custom");
-        CHECK(Base::ThisThread::threadId() != 0);
-        CHECK(Base::ThisThread::threadIdStr() ==
-              Base::intToStr(Base::ThisThread::threadId()));
+        CHECK(Base::ThisThread::ThreadName() == "Custom");
+        CHECK(Base::ThisThread::ThreadId() != 0);
+        CHECK(Base::ThisThread::ThreadIdStr() ==
+              Base::IntToStr(Base::ThisThread::ThreadId()));
       },
       "Custom");
-  CHECK(t1.getThreadId() == 0);
-  CHECK(t2.getThreadId() == 0);
-  CHECK(t3.getThreadId() == 0);
-  t1.start();
-  t2.start();
-  t3.start();
-  CHECK(t1.getThreadId() != 0);
-  CHECK(t2.getThreadId() != 0);
-  CHECK(t3.getThreadId() != 0);
-  CHECK(t1.joinable());
-  CHECK(t2.joinable());
-  CHECK(t3.joinable());
-  t1.join();
-  t2.join();
-  t3.join();
+  CHECK(t1.GetThreadId() == 0);
+  CHECK(t2.GetThreadId() == 0);
+  CHECK(t3.GetThreadId() == 0);
+  t1.Start();
+  t2.Start();
+  t3.Start();
+  CHECK(t1.GetThreadId() != 0);
+  CHECK(t2.GetThreadId() != 0);
+  CHECK(t3.GetThreadId() != 0);
+  CHECK(t1.Joinable());
+  CHECK(t2.Joinable());
+  CHECK(t3.Joinable());
+  t1.Join();
+  t2.Join();
+  t3.Join();
 }
