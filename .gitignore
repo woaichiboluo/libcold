@@ -12,3 +12,5 @@ _deps
 build
 .vscode
 .cache
+out
+/CMakeSettings.json
