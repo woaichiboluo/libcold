@@ -9,7 +9,7 @@
 
 namespace Cold::Base {
 
-enum class LogLevel { TRACE, DEBUG, INFO, WARN, ERROR, FATAL };
+enum class LogLevel { TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF };
 
 struct LogMessage {
   LogLevel level;
@@ -17,6 +17,7 @@ struct LogMessage {
   std::string_view threadName;
   std::string_view loggerName;
   std::source_location location;
+  std::string_view baseName;
   Time logTime;
   std::string_view logLine;
 };

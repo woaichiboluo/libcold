@@ -23,15 +23,17 @@ class FlagFormatter {
 
 class CustomFlagFormatter : public FlagFormatter {
  public:
+  using CustomFlagFormatterPtr = std::unique_ptr<CustomFlagFormatter>;
   CustomFlagFormatter() = default;
   virtual ~CustomFlagFormatter() = default;
-  virtual FlagFormatterPtr Clone() const = 0;
+  virtual CustomFlagFormatterPtr Clone() const = 0;
 };
 
 class LogFormatter {
  public:
   using FlagFormatterPtr = std::unique_ptr<FlagFormatter>;
   using CustomFlagFormatterPtr = std::unique_ptr<CustomFlagFormatter>;
+  using LogFormatterPtr = std::unique_ptr<LogFormatter>;
 
   LogFormatter(std::string pattern = "") : pattern_(std::move(pattern)) {}
   ~LogFormatter() = default;
@@ -54,6 +56,8 @@ class LogFormatter {
 
   const std::string& GetPattern() const { return pattern_; }
   void SetPattern(std::string_view pattern) { pattern_ = pattern; }
+
+  LogFormatterPtr Clone();
 
  private:
   std::string pattern_;

@@ -2,6 +2,8 @@
 
 #include <cassert>
 #include <charconv>
+#include <cstdlib>
+#include <memory>
 #include <string_view>
 
 using namespace Cold::Base;
@@ -41,11 +43,16 @@ class FileNameFormatter : public FlagFormatter {
   ~FileNameFormatter() override = default;
   void Format(const LogMessage& message, LogBuffer& buffer) const override {
     std::string_view fileName(message.location.file_name());
-    auto pos = fileName.find_last_of("/");
-    if (pos != std::string_view::npos) {
-      fileName = fileName.substr(pos + 1);
-    }
     buffer.append(fileName.begin(), fileName.end());
+  }
+};
+
+class BaseNameFormatter : public FlagFormatter {
+ public:
+  BaseNameFormatter() = default;
+  ~BaseNameFormatter() override = default;
+  void Format(const LogMessage& message, LogBuffer& buffer) const override {
+    buffer.append(message.baseName.begin(), message.baseName.end());
   }
 };
 
@@ -195,6 +202,9 @@ bool HandleFlag(char c, std::vector<LogFormatter::FlagFormatterPtr>& sequence) {
     case 'm':
       sequence.push_back(std::make_unique<LoggerNameFormatter>());
       return true;
+    case 'b':
+      sequence.push_back(std::make_unique<BaseNameFormatter>());
+      return true;
     default:
       return false;
   }
@@ -230,4 +240,16 @@ bool LogFormatter::CompilePattern() {
         std::make_unique<PatternTextFormatter>(std::move(text)));
   }
   return true;
+}
+
+LogFormatter::LogFormatterPtr LogFormatter::Clone() {
+  auto ret = std::make_unique<LogFormatter>(pattern_);
+  for (const auto& [flag, ptr] : flagMap_) {
+    ret->flagMap_[flag] = ptr->Clone();
+  }
+  if (!ret->CompilePattern()) {
+    printf("in LogFormatter::Clone :bad pattern");
+    abort();
+  }
+  return ret;
 }

@@ -5,6 +5,7 @@
 
 #include "cold/log/LogCommon.h"
 #include "cold/log/LogFormatter.h"
+#include "cold/log/Logger.h"
 #include "cold/thread/Thread.h"
 #include "cold/util/StringUtil.h"
 #include "third_party/doctest.h"
@@ -19,11 +20,13 @@ Base::LogMessage g_message = {Base::LogLevel::TRACE,
                               "test",
                               {},
                               {},
+                              {},
                               "test logline"};
 
 TEST_CASE("test one flag") {
-  auto location = std::source_location::current();
-  g_message.location = location;
+  constexpr Base::LocationWrapper wrapper;
+  g_message.location = wrapper.location;
+  g_message.baseName = wrapper.baseName;
   Base::LogFormatter formatter;
   Base::LogBuffer buffer;
   formatter.Format(g_message, buffer);
@@ -45,19 +48,25 @@ TEST_CASE("test one flag") {
   formatter.SetPattern("%f");
   CHECK(formatter.CompilePattern());
   formatter.Format(g_message, buffer);
-  CHECK(BufferToView(buffer) == location.function_name());
+  CHECK(BufferToView(buffer) == wrapper.location.function_name());
   // Filename
   buffer.clear();
   formatter.SetPattern("%F");
   CHECK(formatter.CompilePattern());
   formatter.Format(g_message, buffer);
-  CHECK(BufferToView(buffer) == "LogFormatterTest.cpp");
+  CHECK(BufferToView(buffer) == wrapper.location.file_name());
+  // basename
+  buffer.clear();
+  formatter.SetPattern("%b");
+  CHECK(formatter.CompilePattern());
+  formatter.Format(g_message, buffer);
+  CHECK(BufferToView(buffer) == wrapper.baseName);  // basename take from Logger
   // fileline
   buffer.clear();
   formatter.SetPattern("%l");
   CHECK(formatter.CompilePattern());
   formatter.Format(g_message, buffer);
-  CHECK(BufferToView(buffer) == Base::IntToStr(location.line()));
+  CHECK(BufferToView(buffer) == Base::IntToStr(wrapper.location.line()));
   // logLevel
   buffer.clear();
   formatter.SetPattern("%L");
@@ -140,7 +149,7 @@ TEST_CASE("test custom flag") {
    public:
     CustomGFlag() = default;
     ~CustomGFlag() override = default;
-    FlagFormatterPtr Clone() const override {
+    CustomFlagFormatterPtr Clone() const override {
       return std::make_unique<CustomGFlag>();
     }
     void Format(const Base::LogMessage& message,
@@ -166,19 +175,20 @@ TEST_CASE("test custom flag") {
 
 TEST_CASE("test multiple flag") {
   Base::LogBuffer buffer;
-  auto location = std::source_location::current();
+  constexpr Base::LocationWrapper wrapper;
+  g_message.location = wrapper.location;
+  g_message.baseName = wrapper.baseName;
   g_message.threadId = "666";
   g_message.level = Base::LogLevel::INFO;
-  g_message.location = location;
   auto now = Base::Time::Now();
   g_message.logTime = now;
   Base::LogFormatter formatter;
-  formatter.SetPattern("%n %N %m %t %L %F %c %% %f%T%l");
+  formatter.SetPattern("%n %N %m %t %L %b %c %% %f%T%l");
   CHECK(formatter.CompilePattern());
   std::string expect =
       "\n main test 666 INFO  LogFormatterTest.cpp test logline % ";
-  expect += location.function_name() + now.Dump(true) +
-            Base::IntToStr(location.line());
+  expect += wrapper.location.function_name() + now.Dump(true) +
+            Base::IntToStr(wrapper.location.line());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == expect);
 }
