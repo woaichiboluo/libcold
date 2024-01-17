@@ -10,9 +10,11 @@
 
 using namespace Cold;
 
+namespace {
 thread_local pid_t t_threadId = 0;
 thread_local std::string t_threadIdStr;
 thread_local std::string t_threadName = "main";
+}  // namespace
 
 void CacheTidAndTidStr() {
   t_threadId = gettid();

@@ -1,6 +1,8 @@
 #ifndef COLD_LOG_LOGSINK
 #define COLD_LOG_LOGSINK
 
+#include <memory>
+
 #include "cold/log/LogCommon.h"
 #include "cold/log/LogFormatter.h"
 #include "cold/thread/Lock.h"
@@ -10,8 +12,17 @@ namespace Cold::Base {
 class LogSink {
  public:
   using LogFormatterPtr = std::unique_ptr<LogFormatter>;
+  static constexpr const char* kDefaultLogSinkPattern =
+      "%T %L <%N:%t> %c [%b:%l]%n";
 
-  explicit LogSink(LogFormatterPtr ptr) : formatter_(std::move(ptr)) {}
+  LogSink()
+      : formatter_(std::make_unique<LogFormatter>(kDefaultLogSinkPattern)) {}
+
+  explicit LogSink(LogFormatterPtr formatter)
+      : formatter_(std::move(formatter)) {
+    assert(formatter->Available());
+  }
+
   virtual ~LogSink() = default;
 
   LogSink(const LogSink&) = delete;
@@ -28,14 +39,13 @@ class LogSink {
   }
 
   void SetFormatter(LogFormatterPtr formatter) {
-    bool success = formatter->CompilePattern();
-    assert(success);
+    assert(formatter->Available());
     LockGuard guard(mutex_);
     formatter_ = std::move(formatter);
   }
 
  protected:
-  LogFormatterPtr formatter_ GUARDED_BY(mutex_);
+  LogFormatterPtr formatter_;
   Mutex mutex_;
 
   virtual void DoSink(const LogMessage& message) = 0;

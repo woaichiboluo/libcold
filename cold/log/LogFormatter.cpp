@@ -118,7 +118,8 @@ class PatternTextFormatter : public FlagFormatter {
   ~PatternTextFormatter() override = default;
 
   void Format(const LogMessage& message, LogBuffer& buffer) const override {
-    buffer.append(text_.begin(), text_.end());
+    buffer.append(text_.data(), text_.data() + text_.size());
+    // buffer.append()
   }
 
  private:
@@ -242,7 +243,7 @@ bool LogFormatter::CompilePattern() {
   return true;
 }
 
-LogFormatter::LogFormatterPtr LogFormatter::Clone() {
+LogFormatter::LogFormatterPtr LogFormatter::Clone() const {
   auto ret = std::make_unique<LogFormatter>(pattern_);
   for (const auto& [flag, ptr] : flagMap_) {
     ret->flagMap_[flag] = ptr->Clone();

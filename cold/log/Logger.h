@@ -10,6 +10,7 @@
 
 #include "cold/log/LogCommon.h"
 #include "cold/thread/Lock.h"
+#include "cold/thread/Thread.h"
 
 namespace Cold::Base {
 
@@ -72,6 +73,49 @@ struct LocationWrapper {
   std::source_location location;
   std::string_view baseName;
 };
+
+using LoggerPtr = std::shared_ptr<Logger>;
+
+LoggerPtr GetMainLogger();
+void SetMainLogger(LoggerPtr logger);
+
+LoggerPtr GetLogger(const std::string& name);
+bool RemoveLogger(const std::string& name);
+void RegisterLogger(LoggerPtr logger);
+
+#define DOLOG(logger, logLevel, formatStr, args...)            \
+  do {                                                         \
+    constexpr Cold::Base::LocationWrapper wrapper;             \
+    Cold::Base::LogMessage message;                            \
+    message.level = logLevel;                                  \
+    message.threadId = Cold::Base::ThisThread::ThreadIdStr();  \
+    message.threadName = Cold::Base::ThisThread::ThreadName(); \
+    message.loggerName = logger->GetName();                    \
+    message.location = wrapper.location;                       \
+    message.baseName = wrapper.baseName;                       \
+    message.logTime = Cold::Base::Time::Now();                 \
+    auto logLine = fmt::format(formatStr, ##args);             \
+    message.logLine = logLine;                                 \
+    logger->DoLog(message);                                    \
+  } while (0)
+
+#define LOG_TRACE(logger, formatStr, args...) \
+  DOLOG(logger, Cold::Base::LogLevel::TRACE, formatStr, ##args)
+
+#define LOG_DEBUG(logger, formatStr, args...) \
+  DOLOG(logger, Cold::Base::LogLevel::DEBUG, formatStr, ##args)
+
+#define LOG_INFO(logger, formatStr, args...) \
+  DOLOG(logger, Cold::Base::LogLevel::INFO, formatStr, ##args)
+
+#define LOG_WARN(logger, formatStr, args...) \
+  DOLOG(logger, Cold::Base::LogLevel::WARN, formatStr, ##args)
+
+#define LOG_ERROR(logger, formatStr, args...) \
+  DOLOG(logger, Cold::Base::LogLevel::ERROR, formatStr, ##args)
+
+#define LOG_FATAL(logger, formatStr, args...) \
+  DOLOG(logger, Cold::Base::LogLevel::FATAL, formatStr, ##args)
 
 }  // namespace Cold::Base
 

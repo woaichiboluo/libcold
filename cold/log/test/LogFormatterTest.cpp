@@ -34,43 +34,43 @@ TEST_CASE("test one flag") {
   // thread id
   buffer.clear();
   formatter.SetPattern("%t");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == Base::ThisThread::ThreadIdStr());
   // threadName
   buffer.clear();
   formatter.SetPattern("%N");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == Base::ThisThread::ThreadName());
   // function name
   buffer.clear();
   formatter.SetPattern("%f");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == wrapper.location.function_name());
   // Filename
   buffer.clear();
   formatter.SetPattern("%F");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == wrapper.location.file_name());
   // basename
   buffer.clear();
   formatter.SetPattern("%b");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == wrapper.baseName);  // basename take from Logger
   // fileline
   buffer.clear();
   formatter.SetPattern("%l");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == Base::IntToStr(wrapper.location.line()));
   // logLevel
   buffer.clear();
   formatter.SetPattern("%L");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   buffer.clear();
   g_message.level = Base::LogLevel::TRACE;
   formatter.Format(g_message, buffer);
@@ -94,7 +94,7 @@ TEST_CASE("test one flag") {
   // Newline
   buffer.clear();
   formatter.SetPattern("%n");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == "\n");
   // localTime
@@ -102,26 +102,26 @@ TEST_CASE("test one flag") {
   auto now = Base::Time::Now();
   g_message.logTime = now;
   formatter.SetPattern("%T");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(buffer.size() == now.Dump(true).size());
   CHECK(BufferToView(buffer) == now.Dump(true));
   // logline Content
   buffer.clear();
   formatter.SetPattern("%c");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == "test logline");
   // loggername
   buffer.clear();
   formatter.SetPattern("%m");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == "test");
   // symbol %
   buffer.clear();
   formatter.SetPattern("%%");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == "%");
 }
@@ -129,19 +129,25 @@ TEST_CASE("test one flag") {
 TEST_CASE("test bad pattern") {
   Base::LogFormatter formatter;
   formatter.SetPattern("%1");
-  CHECK(formatter.CompilePattern() == false);
+  CHECK(formatter.Available() == false);
+
   formatter.SetPattern("%");
-  CHECK(formatter.CompilePattern() == false);
+  CHECK(formatter.Available() == false);
+
   formatter.SetPattern("%t %T %");
-  CHECK(formatter.CompilePattern() == false);
+  CHECK(formatter.Available() == false);
+
   formatter.SetPattern("%%% %t %T ");
-  CHECK(formatter.CompilePattern() == false);
+  CHECK(formatter.Available() == false);
+
   formatter.SetPattern("% %");
-  CHECK(formatter.CompilePattern() == false);
+  CHECK(formatter.Available() == false);
+
   formatter.SetPattern("%t %c %");
-  CHECK(formatter.CompilePattern() == false);
+  CHECK(formatter.Available() == false);
+
   formatter.SetPattern("% %t %c %n");
-  CHECK(formatter.CompilePattern() == false);
+  CHECK(formatter.Available() == false);
 }
 
 TEST_CASE("test custom flag") {
@@ -162,13 +168,12 @@ TEST_CASE("test custom flag") {
   formatter.AddFlag('g', std::make_unique<CustomGFlag>());
   formatter.SetPattern("%g");
   Base::LogBuffer buffer;
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == "G Flag");
-
   buffer.clear();
   formatter.SetPattern("%N %g %n");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   formatter.Format(g_message, buffer);
   CHECK(BufferToView(buffer) == "main G Flag \n");
 }
@@ -184,7 +189,7 @@ TEST_CASE("test multiple flag") {
   g_message.logTime = now;
   Base::LogFormatter formatter;
   formatter.SetPattern("%n %N %m %t %L %b %c %% %f%T%l");
-  CHECK(formatter.CompilePattern());
+  CHECK(formatter.Available());
   std::string expect =
       "\n main test 666 INFO  LogFormatterTest.cpp test logline % ";
   expect += wrapper.location.function_name() + now.Dump(true) +

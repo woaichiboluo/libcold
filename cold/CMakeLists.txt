@@ -1,4 +1,4 @@
-set(SRC time/Time.cpp util/StringUtil.cpp thread/Thread.cpp log/LogFormatter.cpp)
+set(SRC time/Time.cpp util/StringUtil.cpp thread/Thread.cpp log/LogFormatter.cpp log/Logger.cpp)
 
 add_executable(TimeTest time/test/TimeTest.cpp ${SRC})
 set_target_properties(TimeTest PROPERTIES
@@ -22,6 +22,10 @@ set_target_properties(ThreadTest PROPERTIES
 
 add_executable(LogFormatterTest log/test/LogFormatterTest.cpp ${SRC})
 set_target_properties(LogFormatterTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/log")
+
+add_executable(LoggerTest log/test/LoggerTest.cpp ${SRC})
+set_target_properties(LoggerTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/log")
 
 add_test(NAME TimeTest COMMAND TimeTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/time)

@@ -8,6 +8,7 @@ namespace Cold::Base {
 
 class NullLogSink : public LogSink {
  public:
+  NullLogSink() {}
   explicit NullLogSink(LogFormatterPtr ptr) : LogSink(std::move(ptr)) {}
   ~NullLogSink() override = default;
 

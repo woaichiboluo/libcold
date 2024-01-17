@@ -35,7 +35,10 @@ class LogFormatter {
   using CustomFlagFormatterPtr = std::unique_ptr<CustomFlagFormatter>;
   using LogFormatterPtr = std::unique_ptr<LogFormatter>;
 
-  LogFormatter(std::string pattern = "") : pattern_(std::move(pattern)) {}
+  LogFormatter(std::string pattern = "")
+      : pattern_(std::move(pattern)), available_(false) {
+    available_ = CompilePattern();
+  }
   ~LogFormatter() = default;
 
   LogFormatter(const LogFormatter&) = delete;
@@ -52,15 +55,22 @@ class LogFormatter {
     return *this;
   }
 
-  bool CompilePattern();
-
   const std::string& GetPattern() const { return pattern_; }
-  void SetPattern(std::string_view pattern) { pattern_ = pattern; }
 
-  LogFormatterPtr Clone();
+  void SetPattern(std::string_view pattern) {
+    pattern_ = pattern;
+    available_ = CompilePattern();
+  }
+
+  bool Available() const { return available_; }
+
+  LogFormatterPtr Clone() const;
 
  private:
+  bool CompilePattern();
+
   std::string pattern_;
+  bool available_;
   std::vector<FlagFormatterPtr> formatSequence_;
   std::unordered_map<char, CustomFlagFormatterPtr> flagMap_;
 };

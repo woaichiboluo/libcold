@@ -5,7 +5,11 @@
 #include <string_view>
 #include <utility>
 
+#define FMT_HEADER_ONLY
+
 #include "cold/time/Time.h"
+#include "third_party/fmt/include/fmt/color.h"
+#include "third_party/fmt/include/fmt/core.h"
 
 namespace Cold::Base {
 
@@ -22,7 +26,7 @@ struct LogMessage {
   std::string_view logLine;
 };
 
-using LogBuffer = std::string;
+using LogBuffer = fmt::memory_buffer;
 
 }  // namespace Cold::Base
 
