@@ -15,12 +15,14 @@ class LogSink {
   static constexpr const char* kDefaultLogSinkPattern =
       "%T %L <%N:%t> %c [%b:%l]%n";
 
-  LogSink()
-      : formatter_(std::make_unique<LogFormatter>(kDefaultLogSinkPattern)) {}
+  explicit LogSink(bool needDefaultFormatter = true)
+      : formatter_(needDefaultFormatter
+                       ? std::make_unique<LogFormatter>(kDefaultLogSinkPattern)
+                       : nullptr) {}
 
   explicit LogSink(LogFormatterPtr formatter)
       : formatter_(std::move(formatter)) {
-    assert(formatter->Available());
+    assert(formatter_->Available());
   }
 
   virtual ~LogSink() = default;

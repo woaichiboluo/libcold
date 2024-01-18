@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "cold/log/LogCommon.h"
+#include "cold/log/LogFormatter.h"
 #include "cold/thread/Lock.h"
 #include "cold/thread/Thread.h"
 
@@ -24,7 +25,7 @@ class Logger {
 
   Logger(std::string LoggerName, SinkPtr sink) : Logger(LoggerName, {sink}) {}
 
-  Logger(std::string LoggerName, std::initializer_list<SinkPtr> list)
+  Logger(std::string LoggerName, std::initializer_list<SinkPtr>&& list)
       : Logger(LoggerName, list.begin(), list.end()) {}
 
   template <typename It>
@@ -48,6 +49,8 @@ class Logger {
   void SetFlushLevel(LogLevel level) { flushLevel_ = level; }
 
   void DoLog(const LogMessage& message) { SinkIt(message); }
+
+  const std::vector<SinkPtr>& Sinks() const { return loggerSinks_; }
 
  private:
   void SinkIt(const LogMessage& message);
@@ -75,6 +78,36 @@ struct LocationWrapper {
 };
 
 using LoggerPtr = std::shared_ptr<Logger>;
+using SinkPtr = std::shared_ptr<LogSink>;
+using FormatterPtr = std::unique_ptr<LogFormatter>;
+
+inline FormatterPtr MakeFormatter(std::string pattern = "",
+                                  bool needCustomFlag = false) {
+  return std::make_unique<LogFormatter>(std::move(pattern), needCustomFlag);
+}
+
+template <typename Sink, typename... Args>
+SinkPtr MakeSink(Args&&... args) {
+  return std::make_shared<Sink>(std::forward<Args>(args)...);
+}
+
+inline LoggerPtr MakeLogger(std::string loggerName) {
+  return std::make_shared<Logger>(std::move(loggerName));
+}
+
+inline LoggerPtr MakeLogger(std::string loggerName, SinkPtr sink) {
+  return std::make_shared<Logger>(std::move(loggerName), std::move(sink));
+}
+
+inline LoggerPtr MakeLogger(std::string loggerName,
+                            std::initializer_list<SinkPtr> list) {
+  return std::make_shared<Logger>(std::move(loggerName), std::move(list));
+}
+
+template <typename It>
+LoggerPtr MakeLogger(std::string loggerName, It begin, It end) {
+  return std::make_shared<Logger>(std::move(loggerName), begin, end);
+}
 
 LoggerPtr GetMainLogger();
 void SetMainLogger(LoggerPtr logger);
@@ -83,20 +116,20 @@ LoggerPtr GetLogger(const std::string& name);
 bool RemoveLogger(const std::string& name);
 void RegisterLogger(LoggerPtr logger);
 
-#define DOLOG(logger, logLevel, formatStr, args...)            \
-  do {                                                         \
-    constexpr Cold::Base::LocationWrapper wrapper;             \
-    Cold::Base::LogMessage message;                            \
-    message.level = logLevel;                                  \
-    message.threadId = Cold::Base::ThisThread::ThreadIdStr();  \
-    message.threadName = Cold::Base::ThisThread::ThreadName(); \
-    message.loggerName = logger->GetName();                    \
-    message.location = wrapper.location;                       \
-    message.baseName = wrapper.baseName;                       \
-    message.logTime = Cold::Base::Time::Now();                 \
-    auto logLine = fmt::format(formatStr, ##args);             \
-    message.logLine = logLine;                                 \
-    logger->DoLog(message);                                    \
+#define DOLOG(logger, logLevel, formatStr, args...)               \
+  do {                                                            \
+    constexpr Cold::Base::LocationWrapper ___wrapper;             \
+    Cold::Base::LogMessage ___message;                            \
+    ___message.level = logLevel;                                  \
+    ___message.threadId = Cold::Base::ThisThread::ThreadIdStr();  \
+    ___message.threadName = Cold::Base::ThisThread::ThreadName(); \
+    ___message.loggerName = logger->GetName();                    \
+    ___message.location = ___wrapper.location;                    \
+    ___message.baseName = ___wrapper.baseName;                    \
+    ___message.logTime = Cold::Base::Time::Now();                 \
+    auto ___logLine = fmt::format(formatStr, ##args);             \
+    ___message.logLine = ___logLine;                              \
+    logger->DoLog(___message);                                    \
   } while (0)
 
 #define LOG_TRACE(logger, formatStr, args...) \
