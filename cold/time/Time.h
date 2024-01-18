@@ -59,7 +59,7 @@ class Time {
   }
   constexpr time_t ToTimeT() const { return TimeSinceEpochSeconds(); }
 
-  struct timespec ToTimespec();
+  struct timespec ToTimespec() const;
 
   template <typename Rep, class Period>
   constexpr Time operator+(std::chrono::duration<Rep, Period> duration) const {
@@ -83,7 +83,7 @@ class Time {
     return *this;
   }
 
-  TimePoint::duration operator-(const Time& other) {
+  constexpr TimePoint::duration operator-(const Time& other) const {
     return timePoint_ - other.timePoint_;
   }
 

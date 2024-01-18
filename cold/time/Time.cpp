@@ -68,7 +68,7 @@ std::string Time::Dump(bool isLocal) const {
   return {buf, static_cast<size_t>(ret)};
 }
 
-struct timespec Time::ToTimespec() {
+struct timespec Time::ToTimespec() const {
   struct timespec ts;
   using std::chrono::duration_cast;
   using std::chrono::nanoseconds;
