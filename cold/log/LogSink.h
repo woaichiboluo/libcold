@@ -15,15 +15,10 @@ class LogSink {
   static constexpr const char* kDefaultLogSinkPattern =
       "%T %L <%N:%t> %c [%b:%l]%n";
 
-  explicit LogSink(bool needDefaultFormatter = true)
-      : formatter_(needDefaultFormatter
-                       ? std::make_unique<LogFormatter>(kDefaultLogSinkPattern)
-                       : nullptr) {}
+  explicit LogSink() : formatter_(GetDefaultLogFormatter()) {}
 
   explicit LogSink(LogFormatterPtr formatter)
-      : formatter_(std::move(formatter)) {
-    assert(formatter_->Available());
-  }
+      : formatter_(std::move(formatter)) {}
 
   virtual ~LogSink() = default;
 
@@ -32,6 +27,7 @@ class LogSink {
 
   void Sink(const LogMessage& message) {
     LockGuard guard(mutex_);
+    assert(formatter_->Available());
     DoSink(message);
   }
 
@@ -46,12 +42,26 @@ class LogSink {
     formatter_ = std::move(formatter);
   }
 
+  bool SetPattern(std::string_view pattern) {
+    LockGuard guard(mutex_);
+    assert(formatter_->Available());
+    return formatter_->TryBuild(pattern);
+  }
+
  protected:
   LogFormatterPtr formatter_;
   Mutex mutex_;
 
   virtual void DoSink(const LogMessage& message) = 0;
   virtual void DoFlush() = 0;
+
+ private:
+  static LogFormatterPtr GetDefaultLogFormatter() {
+    auto formatter = std::make_unique<LogFormatter>(kDefaultLogSinkPattern);
+    auto result = formatter->Build();
+    assert(result);
+    return formatter;
+  }
 };
 
 };  // namespace Cold::Base

@@ -35,6 +35,22 @@ void Logger::Flush() {
     sink->Flush();
   }
 }
+
+void Logger::SetPattern(std::string_view pattern) {
+  for (auto& sink : loggerSinks_) {
+    if (!sink->SetPattern(pattern)) {
+      LOG_ERROR(GetMainLogger(),
+                "SetPattern failed.Please check sink formatter.");
+    }
+  }
+}
+
+void Logger::SetFormatter(LogFormatterPtr formatter) {
+  for (auto& sink : loggerSinks_) {
+    sink->SetFormatter(formatter->Clone());
+  }
+}
+
 namespace {
 Mutex g_mutex;
 LoggerPtr g_mainLogger GUARDED_BY(g_mutex) = std::make_shared<Logger>(

@@ -26,11 +26,12 @@ void TestOneSinkMultiLoggers() {
   auto sink = Base::MakeSink<Base::BasicFileSink>(
       "LogSinkTest_OneSinkMultiLoggers.log");
   auto formatter = Base::MakeFormatter("%T %L <%N:%t> %m %c [%b: %l] %n");
-  sink->SetFormatter(std::move(formatter));
+  formatter->Build();
   Base::RegisterLogger(Base::MakeLogger("logger1", sink));
   Base::RegisterLogger(Base::MakeLogger("logger2", sink));
   Base::RegisterLogger(Base::MakeLogger("logger3", sink));
   Base::RegisterLogger(Base::MakeLogger("logger4", sink));
+  Base::GetLogger("logger1")->SetFormatter(std::move(formatter));
   auto logFunc = [](std::string name) {
     auto logger = Base::GetLogger(name);
     for (int i = 0; i < 10000; ++i) {
@@ -54,18 +55,13 @@ void TestOneSinkMultiLoggers() {
 }
 
 void TestMultiSinksMultiLoggers() {
-  auto formatter = Base::MakeFormatter("%T %L <%N:%t> %m %c [%b: %l] %n");
+  // auto formatter = Base::MakeFormatter("%T %L <%N:%t> %m %c [%b: %l] %n");
   auto sink1 = Base::MakeSink<Base::BasicFileSink>(
-      formatter->Clone(), "LogSinkTest_TestMultiSinksMultiLoggers_1.log");
+      "LogSinkTest_TestMultiSinksMultiLoggers_1.log");
   auto sink2 = Base::MakeSink<Base::BasicFileSink>(
-      formatter->Clone(), "LogSinkTest_TestMultiSinksMultiLoggers_2.log");
-  auto sink3 = Base::MakeSink<Base::StdoutLogSink>(formatter->Clone());
-  formatter->AddFlag(
-      'C', std::make_unique<Base::StdoutColorLogSink::CustomColorFlag>());
-  formatter->AddFlag(
-      'K', std::make_unique<Base::StdoutColorLogSink::ColorResetFlag>());
-  formatter->SetPattern("%T %C%L%K <%N:%t> %m %c [%b: %l] %n");
-  auto sink4 = Base::MakeSink<Base::StdoutColorLogSink>(formatter->Clone());
+      "LogSinkTest_TestMultiSinksMultiLoggers_2.log");
+  auto sink3 = Base::MakeSink<Base::StdoutLogSink>();
+  auto sink4 = Base::MakeSink<Base::StdoutColorLogSink>();
   Base::RegisterLogger(
       Base::MakeLogger("logger1", {sink1, sink2, sink3, sink4}));
   Base::RegisterLogger(
@@ -74,10 +70,12 @@ void TestMultiSinksMultiLoggers() {
       Base::MakeLogger("logger3", {sink1, sink2, sink3, sink4}));
   Base::RegisterLogger(
       Base::MakeLogger("logger4", {sink1, sink2, sink3, sink4}));
+  Base::GetLogger("logger1")->SetPattern("%T %L <%N:%t> %m %c [%b: %l] %n");
+  sink4->SetPattern("%T %C%L%K <%N:%t> %m %c [%b: %l] %n");
   auto logFunc = [](std::string name) {
     auto logger = Base::GetLogger(name);
     for (int i = 0; i < 10000; ++i) {
-      LOG_INFO(logger, "TestOneSinkMultiLoggers");
+      LOG_INFO(logger, "TestMultiSinkMultiLoggers");
     }
   };
   std::vector<std::unique_ptr<Base::Thread>> threads;

@@ -47,7 +47,7 @@ Base::Thread::Thread(ThreadTask task, std::string threadName)
       condition_(mutex_) {
   ++numCreated_;
   if (threadName_.empty()) {
-    threadName_ = "Thread" + IntToStr(numCreated_.load());
+    threadName_ = "Thread-" + IntToStr(numCreated_.load());
   }
 }
 

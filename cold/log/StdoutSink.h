@@ -65,12 +65,11 @@ class StdoutColorLogSink : public LogSink {
     }
   };
 
-  StdoutColorLogSink() : LogSink(false) {
-    auto formatter = std::make_unique<LogFormatter>(kStdoutColorSinkPattern);
-    formatter->AddFlag('C', std::make_unique<CustomColorFlag>());
-    formatter->AddFlag('K', std::make_unique<ColorResetFlag>());
-    formatter->Build();
-    SetFormatter(std::move(formatter));
+  StdoutColorLogSink()
+      : LogSink(std::make_unique<LogFormatter>(kStdoutColorSinkPattern)) {
+    formatter_->AddFlag('C', std::make_unique<CustomColorFlag>());
+    formatter_->AddFlag('K', std::make_unique<ColorResetFlag>());
+    formatter_->Build();
   }
 
   explicit StdoutColorLogSink(LogFormatterPtr ptr) : LogSink(std::move(ptr)) {}

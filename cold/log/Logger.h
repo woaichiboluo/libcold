@@ -20,6 +20,7 @@ class LogSink;
 class Logger {
  public:
   using SinkPtr = std::shared_ptr<LogSink>;
+  using LogFormatterPtr = LogFormatter::LogFormatterPtr;
 
   Logger(std::string LoggerName) : Logger(LoggerName, {}) {}
 
@@ -52,6 +53,10 @@ class Logger {
 
   const std::vector<SinkPtr>& Sinks() const { return loggerSinks_; }
 
+  void SetPattern(std::string_view pattern);
+
+  void SetFormatter(LogFormatterPtr formatter);
+
  private:
   void SinkIt(const LogMessage& message);
   bool ShouldFlush(const LogMessage& message) const;
@@ -81,9 +86,8 @@ using LoggerPtr = std::shared_ptr<Logger>;
 using SinkPtr = std::shared_ptr<LogSink>;
 using FormatterPtr = std::unique_ptr<LogFormatter>;
 
-inline FormatterPtr MakeFormatter(std::string pattern = "",
-                                  bool needCustomFlag = false) {
-  return std::make_unique<LogFormatter>(std::move(pattern), needCustomFlag);
+inline FormatterPtr MakeFormatter(std::string pattern = "") {
+  return std::make_unique<LogFormatter>(std::move(pattern));
 }
 
 template <typename Sink, typename... Args>

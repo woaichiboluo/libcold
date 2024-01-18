@@ -29,16 +29,16 @@ class CustomFlagFormatter : public FlagFormatter {
   virtual CustomFlagFormatterPtr Clone() const = 0;
 };
 
+/**
+ *LogFormatter需要Build来保证available
+ */
 class LogFormatter {
  public:
   using FlagFormatterPtr = std::unique_ptr<FlagFormatter>;
   using CustomFlagFormatterPtr = std::unique_ptr<CustomFlagFormatter>;
   using LogFormatterPtr = std::unique_ptr<LogFormatter>;
 
-  LogFormatter(std::string pattern = "", bool needCustomFlag = false)
-      : pattern_(std::move(pattern)) {
-    if (!needCustomFlag) available_ = CompilePattern();
-  }
+  LogFormatter(std::string pattern = "") : pattern_(std::move(pattern)) {}
   ~LogFormatter() = default;
 
   LogFormatter(const LogFormatter&) = delete;
@@ -62,14 +62,24 @@ class LogFormatter {
   bool Available() const { return available_; }
 
   bool Build() {
-    available_ = CompilePattern();
+    available_ = CompilePattern(pattern_);
     return available_;
+  }
+
+  bool TryBuild(std::string_view pattern) {
+    if (CompilePattern(pattern)) {
+      available_ = true;
+      pattern_ = pattern;
+      return true;
+    } else {
+      return false;
+    }
   }
 
   LogFormatterPtr Clone() const;
 
  private:
-  bool CompilePattern();
+  bool CompilePattern(std::string_view patttern);
 
   std::string pattern_;
   bool available_ = false;
