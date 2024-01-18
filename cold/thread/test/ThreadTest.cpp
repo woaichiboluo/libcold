@@ -21,22 +21,22 @@ TEST_CASE("test detach") {
       t += seq;
     }
   });
-  CHECK(thread.GetThreadName() == "Thread1");
+  CHECK(thread.GetThreadName() == "Thread-1");
   CHECK(thread.GetThreadId() == 0);
   thread.Start();
-  CHECK(thread.GetThreadName() == "Thread1");
+  CHECK(thread.GetThreadName() == "Thread-1");
   CHECK(thread.GetThreadId() != 0);
 }
 
 TEST_CASE("test multi thread") {
   Base::Thread t1([=]() {
-    CHECK(Base::ThisThread::ThreadName() == "Thread2");
+    CHECK(Base::ThisThread::ThreadName() == "Thread-2");
     CHECK(Base::ThisThread::ThreadId() != 0);
     CHECK(Base::ThisThread::ThreadIdStr() ==
           Base::IntToStr(Base::ThisThread::ThreadId()));
   });
   Base::Thread t2([=]() {
-    CHECK(Base::ThisThread::ThreadName() == "Thread3");
+    CHECK(Base::ThisThread::ThreadName() == "Thread-3");
     CHECK(Base::ThisThread::ThreadId() != 0);
     CHECK(Base::ThisThread::ThreadIdStr() ==
           Base::IntToStr(Base::ThisThread::ThreadId()));
