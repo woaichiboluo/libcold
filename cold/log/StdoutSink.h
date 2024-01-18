@@ -29,25 +29,11 @@ class StdoutLogSink : public LogSink {
   void DoFlush() override { fflush(stdout); }
 };
 
-// class DefaultLogLevelColor : public CustomFlagFormatter {};
-
 class StdoutColorLogSink : public LogSink {
  public:
   constexpr static const char* kStdoutColorSinkPattern =
-      "%T %C%L%K <%N:%t>  %c [%b:%l]%n";
+      "%T %C%L%K <%N:%t> %c [%b:%l]%n";
 
-  StdoutColorLogSink() {
-    auto formatter = std::make_unique<LogFormatter>();
-    formatter->AddFlag('C', std::make_unique<CustomColorFlag>());
-    formatter->AddFlag('K', std::make_unique<ColorResetFlag>());
-    formatter->SetPattern(kStdoutColorSinkPattern);
-    SetFormatter(std::move(formatter));
-  }
-
-  explicit StdoutColorLogSink(LogFormatterPtr ptr) : LogSink(std::move(ptr)) {}
-  ~StdoutColorLogSink() override = default;
-
- private:
   class CustomColorFlag : public CustomFlagFormatter {
    public:
     void Format(const LogMessage& message, LogBuffer& buffer) const override {
@@ -79,6 +65,18 @@ class StdoutColorLogSink : public LogSink {
     }
   };
 
+  StdoutColorLogSink() : LogSink(false) {
+    auto formatter = std::make_unique<LogFormatter>(kStdoutColorSinkPattern);
+    formatter->AddFlag('C', std::make_unique<CustomColorFlag>());
+    formatter->AddFlag('K', std::make_unique<ColorResetFlag>());
+    formatter->Build();
+    SetFormatter(std::move(formatter));
+  }
+
+  explicit StdoutColorLogSink(LogFormatterPtr ptr) : LogSink(std::move(ptr)) {}
+  ~StdoutColorLogSink() override = default;
+
+ private:
   void DoSink(const LogMessage& message) override {
     LogBuffer buffer;
     formatter_->Format(message, buffer);

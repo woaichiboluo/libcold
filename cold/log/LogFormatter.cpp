@@ -213,6 +213,7 @@ bool HandleFlag(char c, std::vector<LogFormatter::FlagFormatterPtr>& sequence) {
 
 bool LogFormatter::CompilePattern() {
   formatSequence_.clear();
+  std::vector<FlagFormatterPtr> sequence;
   auto n = pattern_.size();
   std::string text;
   for (size_t i = 0; i < n; ++i) {
@@ -226,31 +227,28 @@ bool LogFormatter::CompilePattern() {
       continue;
     }
     if (!text.empty()) {
-      formatSequence_.push_back(
+      sequence.push_back(
           std::make_unique<PatternTextFormatter>(std::move(text)));
     }
     auto it = flagMap_.find(pattern_[i]);
     if (it == flagMap_.end()) {  // use default flags
-      if (!HandleFlag(pattern_[i], formatSequence_)) return false;
+      if (!HandleFlag(pattern_[i], sequence)) return false;
     } else {  // use custom flags
-      formatSequence_.push_back(it->second->Clone());
+      sequence.push_back(it->second->Clone());
     }
   }
   if (!text.empty()) {
-    formatSequence_.push_back(
-        std::make_unique<PatternTextFormatter>(std::move(text)));
+    sequence.push_back(std::make_unique<PatternTextFormatter>(std::move(text)));
   }
+  formatSequence_ = std::move(sequence);
   return true;
 }
 
 LogFormatter::LogFormatterPtr LogFormatter::Clone() const {
-  auto ret = std::make_unique<LogFormatter>(pattern_);
+  auto ret = std::make_unique<LogFormatter>(pattern_, true);
   for (const auto& [flag, ptr] : flagMap_) {
     ret->flagMap_[flag] = ptr->Clone();
   }
-  if (!ret->CompilePattern()) {
-    printf("in LogFormatter::Clone :bad pattern");
-    abort();
-  }
+  if (available_) ret->Build();
   return ret;
 }
