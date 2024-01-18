@@ -8,7 +8,6 @@
 #include "cold/log/LogFormatter.h"
 #include "cold/log/LogSink.h"
 #include "cold/log/Logger.h"
-#include "cold/log/LoggerFactory.h"
 
 namespace Cold::Base {
 
