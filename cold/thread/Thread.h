@@ -13,6 +13,7 @@ namespace ThisThread {
 pid_t ThreadId();
 const std::string& ThreadIdStr();
 const std::string& ThreadName();
+const char* ErrorMsg();
 }  // namespace ThisThread
 
 class Thread {

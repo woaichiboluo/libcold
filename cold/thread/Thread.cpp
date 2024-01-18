@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include <cassert>
+#include <cstring>
 
 #include "cold/thread/Condition.h"
 #include "cold/thread/Lock.h"
@@ -14,6 +15,7 @@ namespace {
 thread_local pid_t t_threadId = 0;
 thread_local std::string t_threadIdStr;
 thread_local std::string t_threadName = "main";
+thread_local char t_errorMsg[256];
 }  // namespace
 
 void CacheTidAndTidStr() {
@@ -32,6 +34,10 @@ const std::string& Base::ThisThread::ThreadIdStr() {
 }
 
 const std::string& Base::ThisThread::ThreadName() { return t_threadName; }
+
+const char* Base::ThisThread::ErrorMsg() {
+  return strerror_r(errno, t_errorMsg, sizeof(t_errorMsg));
+}
 
 std::atomic<int> Base::Thread::numCreated_ = 0;
 
