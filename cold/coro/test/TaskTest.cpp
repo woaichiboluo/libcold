@@ -8,8 +8,8 @@ using Cold::Base::Task;
 
 TEST_CASE("Test Resume Task") {
   int value = 0;
-  auto task = [](int &value) -> Task<> {
-    value = 100;
+  auto task = [](int &v) -> Task<> {
+    v = 100;
     co_return;
   }(value);
   CHECK(value == 0);
@@ -59,8 +59,8 @@ TEST_CASE("Test Nested tasks") {
 
 TEST_CASE("Test move task") {
   int value = 0;
-  auto coro = [](int *value) -> Task<> {
-    *value = 666;
+  auto coro = [](int *v) -> Task<> {
+    *v = 666;
     co_return;
   }(&value);
   auto c = std::move(coro);
