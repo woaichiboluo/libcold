@@ -53,14 +53,17 @@ void Logger::SetFormatter(LogFormatterPtr formatter) {
 
 namespace {
 Mutex g_mutex;
-LoggerPtr g_mainLogger GUARDED_BY(g_mutex) = std::make_shared<Logger>(
-    "main-logger", std::make_unique<StdoutColorLogSink>());
+LoggerPtr g_mainLogger GUARDED_BY(g_mutex);
 std::unordered_map<std::string, LoggerPtr> g_loggerMap GUARDED_BY(g_mutex);
 }  // namespace
 
 namespace Cold::Base {
 LoggerPtr GetMainLogger() {
   LockGuard guard(g_mutex);
+  if (!g_mainLogger) {
+    g_mainLogger = std::make_shared<Logger>(
+        "main-logger", std::make_unique<StdoutColorLogSink>());
+  }
   return g_mainLogger;
 }
 
