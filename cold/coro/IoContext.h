@@ -1,7 +1,6 @@
 #ifndef COLD_CORO_IOCONTEXT
 #define COLD_CORO_IOCONTEXT
 
-#include <coroutine>
 #include <functional>
 #include <map>
 

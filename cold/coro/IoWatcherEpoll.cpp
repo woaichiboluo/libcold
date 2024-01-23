@@ -8,7 +8,6 @@
 #include "cold/coro/IoWatcher.h"
 #include "cold/log/Logger.h"
 #include "cold/thread/Thread.h"
-#include "cold/util/ScopeUtil.h"
 
 using namespace Cold::Base;
 
