@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "cold/coro/Timer.h"
+#include "cold/log/Logger.h"
 #include "cold/time/Time.h"
 
 using namespace Cold::Base;
@@ -17,10 +18,11 @@ void TimeQueue::AddTimer(Timer& timer) {
     timerIdToIndexMap_[timeHeap_.back().timerId] = last;
     Fixup(last);
   } else {
-    // in pendingQueue reset the TimerNode
-    auto index = it->second;
-    assert(index < timeHeap_.size() && timeHeap_[index].timer == &timer);
-    timeHeap_[index] = std::move(node);
+    // in pendingQueue
+    LOG_WARN(GetMainLogger(),
+             "Multiple times call AsyncWait. Current Timer is already in "
+             "TimeQueue TimerId:{}",
+             timer.timerId_);
   }
 }
 
@@ -29,7 +31,8 @@ void TimeQueue::CancelTimer(Timer& timer) {
   // timer already complete
   if (it == timerIdToIndexMap_.end()) return;
   auto index = it->second;
-  assert(index < timeHeap_.size() && timeHeap_[index].timer == &timer);
+  assert(index < timeHeap_.size() && timeHeap_[index].timer == &timer &&
+         timeHeap_[index].timerId == timer.timerId_);
   timeHeap_[index].invliad();
 }
 
@@ -39,7 +42,8 @@ void TimeQueue::UpdateTimer(Timer& timer) {
     return;
   }
   auto index = it->second;
-  assert(index < timeHeap_.size() && timeHeap_[index].timer == &timer);
+  assert(index < timeHeap_.size() && timeHeap_[index].timer == &timer &&
+         timeHeap_[index].timerId == timer.timerId_);
   timeHeap_[index].expiry = timer.expiry_;
   FixDown(index);
   Fixup(index);
@@ -70,17 +74,16 @@ void TimeQueue::FixDown(size_t parent) {
 
 int TimeQueue::HandleTimeout(std::vector<Task<>>& timeoutCoroutines) {
   auto now = Time::Now();
-  if (!timeHeap_.empty() && timeHeap_[0].expiry > now) {
-    auto waitTime = timeHeap_[0].expiry.TimeSinceEpochMilliSeconds() -
-                    now.TimeSinceEpochMilliSeconds();
-    return waitTime > kDefaultTickMilliSeconds ? kDefaultTickMilliSeconds
-                                               : static_cast<int>(waitTime);
-  }
   while (!timeHeap_.empty() && now >= timeHeap_[0].expiry) {
     auto& node = timeHeap_[0];
     if (node.valid) {
       assert(node.timer);
       timeoutCoroutines.push_back(node.timer->GetTimerTask());
+      if (node.timer->repeated_) {
+        node.expiry = node.timer->GetNextExpiry();
+        FixDown(0);
+        continue;
+      }
     }
     assert(timerIdToIndexMap_.count(node.timerId));
     timerIdToIndexMap_.erase(node.timerId);
@@ -88,6 +91,13 @@ int TimeQueue::HandleTimeout(std::vector<Task<>>& timeoutCoroutines) {
     if (timeHeap_.size() > 1) timerIdToIndexMap_[timeHeap_.front().timerId] = 0;
     timeHeap_.pop_back();
     FixDown(0);
+  }
+  assert(timeHeap_.empty() || timeHeap_[0].expiry > now);
+  if (!timeHeap_.empty()) {
+    auto waitTime = timeHeap_[0].expiry.TimeSinceEpochMilliSeconds() -
+                    now.TimeSinceEpochMilliSeconds();
+    return waitTime > kDefaultTickMilliSeconds ? kDefaultTickMilliSeconds
+                                               : static_cast<int>(waitTime);
   }
   return kDefaultTickMilliSeconds;
 }

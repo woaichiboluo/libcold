@@ -59,6 +59,7 @@ void IoContext::Start() {
     LOG_TRACE(GetMainLogger(), "timeout coroutines count:{} waitTime:{}",
               tasks.size(), waitTime);
     for (auto& task : tasks) {
+      assert(task.handle_);
       auto wrappedTask = [](Task<> coro, IoContext* context) -> Task<> {
         co_await coro;
         co_await TaskCompletionAwaitable(context);
@@ -75,7 +76,7 @@ void IoContext::Start() {
     // execute pending coroutines
     tasks.clear();
     {
-      LockGuard guard(pendingTasksMutex_);
+      LockGuard guard(mutex_);
       tasks.swap(pendingTasks_);
     }
     for (auto& task : tasks) {
@@ -84,12 +85,16 @@ void IoContext::Start() {
       handle.resume();
     }
     // clear complete coroutines
-    for (const auto& completion : completions_) {
+    std::vector<std::coroutine_handle<>> completions;
+    {
+      LockGuard guard(mutex_);
+      completions.swap(completions_);
+    }
+    for (const auto& completion : completions) {
       assert(ioContextTasks_.count(completion));
       assert(completion.done());
       ioContextTasks_.erase(completion);
     }
-    completions_.clear();
   }
 }
 
@@ -99,6 +104,7 @@ void IoContext::Stop() {
 }
 
 void IoContext::CoSpawn(Function&& function) {
+  if (!function) return;
   AddTask([](Function func, IoContext* context) -> Task<> {
     func();
     co_await TaskCompletionAwaitable(context);
@@ -108,8 +114,12 @@ void IoContext::CoSpawn(Function&& function) {
 
 void IoContext::AddTask(Task<> task) {
   {
-    LockGuard guard(pendingTasksMutex_);
+    LockGuard guard(mutex_);
     pendingTasks_.push_back(std::move(task));
   }
   ioWatcher_->Wakeup();
+}
+
+void IoContext::HandleIoEvent(internal::IoEvent event) {
+  CoSpawn([this, event]() { ioWatcher_->HandleIoEvent(event); });
 }
