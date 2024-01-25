@@ -1,4 +1,11 @@
-set(SRC time/Time.cpp util/StringUtil.cpp thread/Thread.cpp log/LogFormatter.cpp log/Logger.cpp coro/IoWatcherEpoll.cpp coro/IoContext.cpp coro/Timer.cpp coro/TimeQueue.cpp)
+set(
+    SRC time/Time.cpp
+    util/StringUtil.cpp
+    thread/Thread.cpp
+    log/LogFormatter.cpp log/Logger.cpp
+    coro/IoWatcherEpoll.cpp coro/IoContext.cpp coro/Timer.cpp coro/TimeQueue.cpp
+    net/IpAddress.cpp
+)
 
 # time
 add_executable(TimeTest time/test/TimeTest.cpp ${SRC})
@@ -45,6 +52,10 @@ add_executable(TimerTest coro/test/TimerTest.cpp ${SRC})
 set_target_properties(TimerTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/coro")
 
+add_executable(IpAddressTest net/test/IpAddressTest.cpp ${SRC})
+set_target_properties(IpAddressTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
+
 # time
 add_test(NAME TimeTest COMMAND TimeTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/time)
 
@@ -64,3 +75,6 @@ add_test(NAME LogSinkTest COMMAND LogSinkTest WORKING_DIRECTORY ${CMAKE_BINARY_D
 # coro
 add_test(NAME TaskTest COMMAND TaskTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/coro)
 add_test(NAME TimerTest COMMAND TimerTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/coro)
+
+# net
+add_test(NAME IpAddressTest COMMAND IpAddressTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/net)
