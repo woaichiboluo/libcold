@@ -32,7 +32,7 @@ class ScopeFdGuard {
   ScopeFdGuard(const ScopeFdGuard&) = delete;
   ScopeFdGuard& operator=(const ScopeFdGuard&) = delete;
 
-  int Fd() const { return fd_; }
+  operator int() { return fd_; }
 
  private:
   int fd_;

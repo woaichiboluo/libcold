@@ -45,20 +45,20 @@ void EpollEventEntry::UpdateInterest(internal::Mode mode) {
 
 IoWatcherEpoll::IoWatcherEpoll()
     : epollFd_(epoll_create1(EPOLL_CLOEXEC)), wakeupFd_(CreateEventFd()) {
-  if (epollFd_.Fd() < 0) {
+  if (epollFd_ < 0) {
     LOG_FATAL(GetMainLogger(), "Cannot create epollfd Reson:{}",
               ThisThread::ErrorMsg());
   }
   epollEvents_.resize(16);
   internal::IoEvent wakeupEvent;
-  wakeupEvent.fd = wakeupFd_.Fd();
+  wakeupEvent.fd = wakeupFd_;
   wakeupEvent.mode = internal::Mode::READ;
   HandleIoEvent(wakeupEvent);
 }
 
 IoWatcherEpoll::~IoWatcherEpoll() {
   internal::IoEvent wakeupEvent;
-  wakeupEvent.fd = wakeupFd_.Fd();
+  wakeupEvent.fd = wakeupFd_;
   wakeupEvent.mode = internal::Mode::DISABLE_ALL;
   // HandleIoEvent(wakeupEvent);
 }
@@ -85,7 +85,7 @@ void IoWatcherEpoll::AddEpollEvent(EpollEventEntry& entry) {
   struct epoll_event event;
   event.events = entry.interest;
   event.data.ptr = &entry;
-  int ret = epoll_ctl(epollFd_.Fd(), EPOLL_CTL_ADD, entry.fd, &event);
+  int ret = epoll_ctl(epollFd_, EPOLL_CTL_ADD, entry.fd, &event);
   if (ret == 0) {
     entry.registerEvent = entry.interest;
   } else {
@@ -100,7 +100,7 @@ void IoWatcherEpoll::UpdateEpollEvent(EpollEventEntry& entry) {
   event.events = entry.interest;
   event.data.ptr = &entry;
   int operation = entry.interest ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
-  int ret = epoll_ctl(epollFd_.Fd(), operation, entry.fd, &event);
+  int ret = epoll_ctl(epollFd_, operation, entry.fd, &event);
   if (ret == 0) {
     if (operation == EPOLL_CTL_MOD)
       entry.registerEvent = entry.interest;
@@ -117,7 +117,7 @@ const std::vector<std::coroutine_handle<>>& IoWatcherEpoll::WatchIo(
     int waitTime) {
   activeCoroutines_.clear();
   const int epoll_result =
-      epoll_wait(epollFd_.Fd(), epollEvents_.data(),
+      epoll_wait(epollFd_, epollEvents_.data(),
                  static_cast<int>(epollEvents_.size()), waitTime);
   if (epoll_result < 0) {
     LOG_ERROR(GetMainLogger(), "epoll_wait error reson:{}",
@@ -130,7 +130,7 @@ const std::vector<std::coroutine_handle<>>& IoWatcherEpoll::WatchIo(
       auto& epollEvent = epollEvents_[i];
       auto events = epollEvent.events;
       auto& entry = *static_cast<EpollEventEntry*>(epollEvent.data.ptr);
-      if (entry.fd == wakeupFd_.Fd()) {
+      if (entry.fd == wakeupFd_) {
         HandleWakeup();
         continue;
       }
@@ -158,7 +158,7 @@ const std::vector<std::coroutine_handle<>>& IoWatcherEpoll::WatchIo(
 
 void IoWatcherEpoll::Wakeup() {
   uint64_t value = 666;
-  if (write(wakeupFd_.Fd(), &value, sizeof value) != sizeof value) {
+  if (write(wakeupFd_, &value, sizeof value) != sizeof value) {
     LOG_ERROR(GetMainLogger(), "Wakeup Error Reason:{}",
               ThisThread::ErrorMsg());
   }
@@ -167,7 +167,7 @@ void IoWatcherEpoll::Wakeup() {
 void IoWatcherEpoll::HandleWakeup() {
   uint64_t value = 0;
   LOG_TRACE(GetMainLogger(), "HandleWakeup");
-  if (read(wakeupFd_.Fd(), &value, sizeof value) != sizeof value) {
+  if (read(wakeupFd_, &value, sizeof value) != sizeof value) {
     LOG_ERROR(GetMainLogger(), "HandleWakeup Error Reason:{}",
               ThisThread::ErrorMsg());
   }
