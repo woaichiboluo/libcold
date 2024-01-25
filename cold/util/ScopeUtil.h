@@ -13,9 +13,7 @@ class ScopeGuard {
  public:
   ScopeGuard(Callable&& call) : call_(std::move(call)) {}
 
-  ~ScopeGuard() {
-    if (call_) call_();
-  }
+  ~ScopeGuard() { call_(); }
 
   ScopeGuard(const ScopeGuard&) = delete;
   ScopeGuard& operator=(const ScopeGuard&) = delete;
