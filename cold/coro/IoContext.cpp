@@ -1,5 +1,7 @@
 #include "cold/coro/IoContext.h"
 
+#include <sys/signal.h>
+
 #include <memory>
 #include <utility>
 
@@ -9,6 +11,21 @@
 #include "cold/thread/Thread.h"
 
 using namespace Cold::Base;
+
+namespace {
+class IgnoreSigPipe {
+ public:
+  IgnoreSigPipe() {
+    ::signal(SIGPIPE, SIG_IGN);
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGPIPE);
+    sigprocmask(SIG_BLOCK, &set, nullptr);
+  }
+};
+
+IgnoreSigPipe __;
+}  // namespace
 
 IoContext::IoContext()
     : ioWatcher_(internal::GetDefaultIoWatcher()),
