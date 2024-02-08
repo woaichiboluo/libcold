@@ -27,6 +27,11 @@ class IoContext {
   void AddTimer(Timer& timer);
   void CancelTimer(Timer& timer);
   void UpdateTimer(Timer& timer);
+
+  void AddReadIoEvent(int fd, std::coroutine_handle<> handle);
+  void AddWriteIoEvent(int fd, std::coroutine_handle<> handle);
+  void RemoveReadIoEvent(int fd);
+  void RemoveWriteIoEvent(int fd);
   void HandleIoEvent(internal::IoEvent event);
 
   void Start();
@@ -64,7 +69,7 @@ class IoContext {
 
 template <typename T>
 void IoContext::CoSpawn(Task<T>&& task) {
-  assert(task.handle_);
+  assert(task.GetHandle());
   AddTask([](Task<T> coro, IoContext* context) -> Task<> {
     co_await coro;
     co_await TaskCompletionAwaitable(context);

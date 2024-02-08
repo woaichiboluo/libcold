@@ -56,19 +56,15 @@ void IoContext::Start() {
     LOG_TRACE(GetMainLogger(), "timeout coroutines count:{} waitTime:{}",
               tasks.size(), waitTime);
     for (auto& task : tasks) {
-      assert(task.handle_);
+      assert(task.GetHandle());
+      assert(!task.Done());
       auto wrappedTask = [](Task<> coro, IoContext* context) -> Task<> {
         co_await coro;
         co_await TaskCompletionAwaitable(context);
       }(std::move(task), this);
-      auto handle = wrappedTask.handle_;
+      auto handle = wrappedTask.GetHandle();
       ioContextTasks_.insert({handle, std::move(wrappedTask)});
       handle.resume();
-    }
-    // execute wating IO coroutines
-    const auto& activeCoros = ioWatcher_->WatchIo(waitTime);
-    for (const auto& coro : activeCoros) {
-      coro.resume();
     }
     // execute pending coroutines
     tasks.clear();
@@ -77,9 +73,15 @@ void IoContext::Start() {
       tasks.swap(pendingTasks_);
     }
     for (auto& task : tasks) {
-      auto handle = task.handle_;
+      auto handle = task.GetHandle();
+      assert(!handle.done());
       ioContextTasks_.insert({handle, std::move(task)});
       handle.resume();
+    }
+    // execute wating IO coroutines
+    const auto& activeCoros = ioWatcher_->WatchIo(waitTime);
+    for (const auto& coro : activeCoros) {
+      if (!coro.done()) coro.resume();
     }
     // clear complete coroutines
     std::vector<std::coroutine_handle<>> completions;
@@ -119,4 +121,34 @@ void IoContext::AddTask(Task<> task) {
 
 void IoContext::HandleIoEvent(internal::IoEvent event) {
   CoSpawn([this, event]() { ioWatcher_->HandleIoEvent(event); });
+}
+
+void IoContext::AddReadIoEvent(int fd, std::coroutine_handle<> handle) {
+  internal::IoEvent event;
+  event.fd = fd;
+  event.mode = internal::Mode::READ;
+  event.callbackCoroutine = handle;
+  HandleIoEvent(event);
+}
+
+void IoContext::AddWriteIoEvent(int fd, std::coroutine_handle<> handle) {
+  internal::IoEvent event;
+  event.fd = fd;
+  event.mode = internal::Mode::WRITE;
+  event.callbackCoroutine = handle;
+  HandleIoEvent(event);
+}
+
+void IoContext::RemoveReadIoEvent(int fd) {
+  internal::IoEvent event{};
+  event.fd = fd;
+  event.mode = internal::Mode::DISABLE_READ;
+  HandleIoEvent(event);
+}
+
+void IoContext::RemoveWriteIoEvent(int fd) {
+  internal::IoEvent event{};
+  event.fd = fd;
+  event.mode = internal::Mode::DISABLE_WRITE;
+  HandleIoEvent(event);
 }

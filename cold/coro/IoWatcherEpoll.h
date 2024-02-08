@@ -21,7 +21,7 @@ class IoWatcherEpoll : public IoWatcher {
     std::coroutine_handle<> writeCallbackCoroutine = std::noop_coroutine();
 
     static EpollEventEntry FromIoEvent(const internal::IoEvent& event);
-    void UpdateInterest(internal::Mode mode);
+    void UpdateEntry(internal::Mode mode);
   };
 
   IoWatcherEpoll();

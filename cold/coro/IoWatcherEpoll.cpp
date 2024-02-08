@@ -36,11 +36,15 @@ EpollEventEntry EpollEventEntry::FromIoEvent(const internal::IoEvent& event) {
   return entry;
 }
 
-void EpollEventEntry::UpdateInterest(internal::Mode mode) {
+void EpollEventEntry::UpdateEntry(internal::Mode mode) {
   if (mode == internal::Mode::READ || mode == internal::Mode::WRITE)
     interest |= static_cast<uint32_t>(mode);
   else
     interest &= static_cast<uint32_t>(mode);
+  if (!(interest & static_cast<int>(internal::Mode::READ)))
+    readCallbackCoroutine = std::noop_coroutine();
+  if (!(interest & static_cast<int>(internal::Mode::WRITE)))
+    writeCallbackCoroutine = std::noop_coroutine();
 }
 
 IoWatcherEpoll::IoWatcherEpoll()
@@ -60,7 +64,7 @@ IoWatcherEpoll::~IoWatcherEpoll() {
   internal::IoEvent wakeupEvent;
   wakeupEvent.fd = wakeupFd_;
   wakeupEvent.mode = internal::Mode::DISABLE_ALL;
-  // HandleIoEvent(wakeupEvent);
+  HandleIoEvent(wakeupEvent);
 }
 
 void IoWatcherEpoll::HandleIoEvent(const internal::IoEvent& event) {
@@ -76,7 +80,7 @@ void IoWatcherEpoll::HandleIoEvent(const internal::IoEvent& event) {
     AddEpollEvent(entries_[entry.fd]);
   } else {
     auto& entry = it->second;
-    entry.UpdateInterest(event.mode);
+    entry.UpdateEntry(event.mode);
     UpdateEpollEvent(entry);
   }
 }
@@ -116,6 +120,7 @@ void IoWatcherEpoll::UpdateEpollEvent(EpollEventEntry& entry) {
 const std::vector<std::coroutine_handle<>>& IoWatcherEpoll::WatchIo(
     int waitTime) {
   activeCoroutines_.clear();
+  LOG_DEBUG(GetMainLogger(), "WatchIo current map size:{}", entries_.size());
   const int epoll_result =
       epoll_wait(epollFd_, epollEvents_.data(),
                  static_cast<int>(epollEvents_.size()), waitTime);

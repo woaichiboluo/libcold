@@ -73,8 +73,6 @@ class Promise<void> : public PromiseBase {
 template <typename T = void>
 class Task {
  public:
-  friend class IoContext;
-
   using promise_type = internal::Promise<T>;
   using value_type = T;
 
@@ -104,6 +102,8 @@ class Task {
   void Resume() const {
     if (handle_) handle_.resume();
   }
+
+  std::coroutine_handle<> GetHandle() { return handle_; }
 
   auto operator co_await() const noexcept { return Awaitable(handle_); }
 
