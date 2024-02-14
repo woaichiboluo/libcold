@@ -10,8 +10,8 @@ namespace Cold::Net::SocketOptions {
 struct KeepAlive {
   explicit KeepAlive(bool open = false) : value(open ? 1 : 0) {}
 
-  const int level = SOL_SOCKET;
-  const int optName = SO_KEEPALIVE;
+  constexpr static int level = SOL_SOCKET;
+  constexpr static int optName = SO_KEEPALIVE;
   int value;
   socklen_t len = sizeof(int);
 };
@@ -22,8 +22,8 @@ struct Linger {
     value.l_linger = lingerTime;
   }
 
-  const int level = SOL_SOCKET;
-  const int optName = SO_LINGER;
+  constexpr static int level = SOL_SOCKET;
+  constexpr static int optName = SO_LINGER;
   struct linger value {};
   socklen_t len = sizeof(struct linger);
 };
@@ -31,8 +31,8 @@ struct Linger {
 struct TcpNoDelay {
   explicit TcpNoDelay(bool open = false) : value(open ? 1 : 0) {}
 
-  const int level = IPPROTO_TCP;
-  const int optName = TCP_NODELAY;
+  constexpr static int level = IPPROTO_TCP;
+  constexpr static int optName = TCP_NODELAY;
   int value;
   socklen_t len = sizeof(int);
 };
@@ -40,8 +40,8 @@ struct TcpNoDelay {
 struct ReuseAddress {
   explicit ReuseAddress(bool open = false) : value(open ? 1 : 0) {}
 
-  const int level = SOL_SOCKET;
-  const int optName = SO_REUSEADDR;
+  constexpr static int level = SOL_SOCKET;
+  constexpr static int optName = SO_REUSEADDR;
   int value;
   socklen_t len = sizeof(int);
 };
@@ -49,9 +49,16 @@ struct ReuseAddress {
 struct ReusePort {
   explicit ReusePort(bool open = false) : value(open ? 1 : 0) {}
 
-  const int level = SOL_SOCKET;
-  const int optName = SO_REUSEPORT;
+  constexpr static int level = SOL_SOCKET;
+  constexpr static int optName = SO_REUSEPORT;
   int value;
+  socklen_t len = sizeof(int);
+};
+
+struct SockError {
+  constexpr static int level = SOL_SOCKET;
+  constexpr static int optName = SO_ERROR;
+  int value = 0;
   socklen_t len = sizeof(int);
 };
 
