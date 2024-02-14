@@ -3,6 +3,9 @@
 
 #include <sys/socket.h>
 
+#include <atomic>
+
+#include "cold/net/IoAwaitable.h"
 #include "cold/net/IpAddress.h"
 
 namespace Cold::Base {
@@ -44,6 +47,7 @@ class BasicSocket {
   bool Bind(IpAddress address);
   void ShutDown();
   virtual void Close();
+  bool IsConnected() const { return connected_; }
 
   template <typename SocketOption>
   bool SetOption(const SocketOption& option) const {
@@ -57,11 +61,47 @@ class BasicSocket {
                       &option.len) == 0;
   }
 
+  auto Connect(const IpAddress& address) {
+    return ConnectAwaitable(ioContext_, fd_, address, &connected_,
+                            &localAddress_, &remoteAddress_);
+  }
+
+  template <typename PERIOD, typename REP>
+  auto ConnectWithTimeout(const IpAddress& remoteAddress,
+                          std::chrono::duration<PERIOD, REP> duration) {
+    return IoTimeoutAwaitable(ioContext_, Connect(remoteAddress), duration);
+  }
+
+  auto Read(void* buf, size_t count) {
+    return ReadAwaitable(ioContext_, fd_, buf, count, connected_);
+  }
+
+  auto Write(const void* buf, size_t count) {
+    return WriteAwaitable(ioContext_, fd_, buf, count, connected_);
+  }
+
+  template <typename PERIOD, typename REP>
+  auto ReadWithTimeout(void* buf, size_t count,
+                       std::chrono::duration<PERIOD, REP> duration) {
+    return IoTimeoutAwaitable(ioContext_, Read(buf, count), duration);
+  }
+
+  template <typename PERIOD, typename REP>
+  auto WriteWithTimeout(const void* buf, size_t count,
+                        std::chrono::duration<PERIOD, REP> duration) {
+    return IoTimeoutAwaitable(ioContext_, Write(buf, count), duration);
+  }
+
  protected:
   Base::IoContext* ioContext_;
   int fd_ = -1;
   IpAddress localAddress_;
   IpAddress remoteAddress_;
+  /*
+    针对TCP socket而言 connected_代表的是两个TCP连接之间是否建立有连接
+    针对UDP socket而言 connected_代表的是UDP socket是否使用了Connect
+  */
+  std::atomic<bool> connected_ = false;
 };
 
 }  // namespace Cold::Net

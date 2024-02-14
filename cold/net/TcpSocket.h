@@ -5,7 +5,6 @@
 
 #include "cold/log/Logger.h"
 #include "cold/net/BasicSocket.h"
-#include "cold/net/IoAwaitable.h"
 
 namespace Cold::Net {
 
@@ -25,54 +24,19 @@ class TcpSocket : public Net::BasicSocket {
   TcpSocket(Base::IoContext& ioContext, const IpAddress& local,
             const IpAddress& remote, int fd)
       : BasicSocket(ioContext, local, remote, fd) {
+    // FIXME check fd nonblocking
     connected_ = true;
   }
 
-  TcpSocket(TcpSocket&& other)
-      : BasicSocket(std::move(other)), connected_(other.connected_.load()) {
-    other.connected_ = false;
-  }
-
-  TcpSocket& operator=(TcpSocket&& other) {
-    if (this == &other) return *this;
-    BasicSocket::operator=(std::move(other));
-    connected_ = other.connected_.load();
-    other.connected_ = false;
-    return *this;
-  }
+  TcpSocket(TcpSocket&& other) = default;
+  TcpSocket& operator=(TcpSocket&& other) = default;
 
   ~TcpSocket() override = default;
 
-  auto Read(void* buf, size_t count) {
-    return ReadAwaitable(ioContext_, fd_, buf, count, connected_);
-  }
-
-  auto Write(const void* buf, size_t count) {
-    return WriteAwaitable(ioContext_, fd_, buf, count, connected_);
-  }
-
-  template <typename PERIOD, typename REP>
-  auto ReadWithTimeout(void* buf, size_t count,
-                       std::chrono::duration<PERIOD, REP> duration) {
-    return IoTimeoutAwaitable(ioContext_, Read(buf, count), duration);
-  }
-
-  template <typename PERIOD, typename REP>
-  auto WriteWithTimeout(const void* buf, size_t count,
-                        std::chrono::duration<PERIOD, REP> duration) {
-    return IoTimeoutAwaitable(ioContext_, Write(buf, count), duration);
-  }
-
-  bool IsConnected() const { return connected_; }
-
   void Close() override {
-    assert(connected_);
     connected_ = false;
     BasicSocket::Close();
   }
-
- private:
-  std::atomic<bool> connected_ = false;
 };
 
 }  // namespace Cold::Net

@@ -16,9 +16,11 @@ Net::BasicSocket::BasicSocket(BasicSocket&& other)
     : ioContext_(other.ioContext_),
       fd_(other.fd_),
       localAddress_(other.localAddress_),
-      remoteAddress_(other.remoteAddress_) {
+      remoteAddress_(other.remoteAddress_),
+      connected_(other.connected_.load()) {
   other.ioContext_ = nullptr;
   other.fd_ = -1;
+  other.connected_ = false;
 }
 
 Net::BasicSocket& Net::BasicSocket::operator=(BasicSocket&& other) {
@@ -28,8 +30,10 @@ Net::BasicSocket& Net::BasicSocket::operator=(BasicSocket&& other) {
   fd_ = other.fd_;
   localAddress_ = other.localAddress_;
   remoteAddress_ = other.remoteAddress_;
+  connected_ = other.connected_.load();
   other.ioContext_ = nullptr;
   other.fd_ = -1;
+  other.connected_ = false;
   return *this;
 }
 
