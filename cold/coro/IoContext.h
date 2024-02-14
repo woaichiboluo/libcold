@@ -38,7 +38,7 @@ class IoContext {
   void Stop();
 
  private:
-  struct TaskCompletionAwaitable {
+  struct TaskCompletionAwaitable : public AwaitableNonCopyable {
     using promise_type = Task<>::promise_type;
 
     TaskCompletionAwaitable(IoContext* context) : ioContext(context) {}

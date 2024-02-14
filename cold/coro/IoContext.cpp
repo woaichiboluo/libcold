@@ -34,7 +34,6 @@ IoContext::IoContext()
 IoContext::~IoContext() { assert(!running_); }
 
 void IoContext::AddTimer(Timer& timer) {
-  assert(&timer.GetIoContext() == this);
   {
     LockGuard guard(timeQueueMutex_);
     timeQueue_->AddTimer(timer);
@@ -43,7 +42,6 @@ void IoContext::AddTimer(Timer& timer) {
 }
 
 void IoContext::CancelTimer(Timer& timer) {
-  assert(&timer.GetIoContext() == this);
   {
     LockGuard guard(timeQueueMutex_);
     timeQueue_->CancelTimer(timer);
@@ -52,7 +50,6 @@ void IoContext::CancelTimer(Timer& timer) {
 }
 
 void IoContext::UpdateTimer(Timer& timer) {
-  assert(&timer.GetIoContext() == this);
   {
     LockGuard guard(timeQueueMutex_);
     timeQueue_->UpdateTimer(timer);

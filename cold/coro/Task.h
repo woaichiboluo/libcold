@@ -14,6 +14,13 @@ namespace Cold::Base {
 template <typename T>
 class Task;
 
+struct AwaitableNonCopyable {
+  AwaitableNonCopyable() = default;
+  ~AwaitableNonCopyable() = default;
+  AwaitableNonCopyable(const AwaitableNonCopyable&) = delete;
+  AwaitableNonCopyable& operator=(const AwaitableNonCopyable&) = delete;
+};
+
 namespace internal {
 class PromiseBase {
  public:
@@ -29,7 +36,7 @@ class PromiseBase {
   }
 
  private:
-  struct FinalAwaitable {
+  struct FinalAwaitable : public AwaitableNonCopyable {
     bool await_ready() noexcept { return false; }
     template <typename PROMISE>
     void await_suspend(std::coroutine_handle<PROMISE> handle) noexcept {

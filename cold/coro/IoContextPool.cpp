@@ -22,7 +22,7 @@ Base::IoContextPool::~IoContextPool() {
     context->Stop();
   }
   for (auto& thread : threads_) {
-    thread->Join();
+    if (thread->Started()) thread->Join();
   }
 }
 
