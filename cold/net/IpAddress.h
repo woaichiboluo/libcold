@@ -22,6 +22,10 @@ class IpAddress {
     return reinterpret_cast<const struct sockaddr*>(&ipv6Addr_);
   }
 
+  struct sockaddr* GetSockaddr() {
+    return reinterpret_cast<struct sockaddr*>(&ipv6Addr_);
+  }
+
   std::string GetIp() const;
   uint16_t GetPort() const;
   std::string GetIpPort() const;
@@ -34,6 +38,7 @@ class IpAddress {
   void SetScopeId(uint32_t scope_id);
 
   static std::optional<IpAddress> Resolve(std::string_view hostname,
+                                          const char* service,
                                           bool ipv6 = false);
 
  private:

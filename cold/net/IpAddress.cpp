@@ -68,12 +68,12 @@ std::string IpAddress::GetIpPort() const {
 }
 
 std::optional<IpAddress> IpAddress::Resolve(std::string_view hostname,
-                                            bool ipv6) {
+                                            const char* service, bool ipv6) {
   struct addrinfo hints {};
   struct addrinfo* res{};
   hints.ai_family = ipv6 ? AF_INET6 : AF_INET;
-  hints.ai_socktype = SOCK_DGRAM;
-  if (getaddrinfo(hostname.data(), nullptr, &hints, &res) != 0) {
+  hints.ai_socktype = 0;
+  if (getaddrinfo(hostname.data(), service, &hints, &res) != 0) {
     LOG_ERROR(Base::GetMainLogger(), "Resolve hostname:{} error. Reason:{}",
               hostname, gai_strerror(errno));
     return {};

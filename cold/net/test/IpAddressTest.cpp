@@ -60,17 +60,17 @@ TEST_CASE("test ipv6 address") {
 }
 
 TEST_CASE("test resolve") {
-  auto addr = IpAddress::Resolve("www.baidu.com");
+  auto addr = IpAddress::Resolve("www.baidu.com", "80");
   CHECK(addr);
   CHECK(addr->GetFamily() == AF_INET);
   CHECK(addr->IsIpv4());
   CHECK(addr->IsIpv6() == false);
-  CHECK(addr->GetPort() == 0);
+  CHECK(addr->GetPort() == 80);
 
-  auto addr1 = IpAddress::Resolve("www.baidu.com", true);
+  auto addr1 = IpAddress::Resolve("www.baidu.com", "443", true);
   CHECK(addr1.has_value());
   CHECK(addr1->GetFamily() == AF_INET6);
   CHECK(addr1->IsIpv4() == false);
   CHECK(addr1->IsIpv6());
-  CHECK(addr1->GetPort() == 0);
+  CHECK(addr1->GetPort() == 443);
 }
