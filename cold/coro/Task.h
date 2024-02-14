@@ -19,6 +19,8 @@ struct AwaitableNonCopyable {
   ~AwaitableNonCopyable() = default;
   AwaitableNonCopyable(const AwaitableNonCopyable&) = delete;
   AwaitableNonCopyable& operator=(const AwaitableNonCopyable&) = delete;
+  AwaitableNonCopyable(AwaitableNonCopyable&&) = default;
+  AwaitableNonCopyable& operator=(AwaitableNonCopyable&&) = default;
 };
 
 namespace internal {
