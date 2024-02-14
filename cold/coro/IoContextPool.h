@@ -15,6 +15,9 @@ class IoContextPool {
   IoContextPool(size_t threadNum = 0);
   ~IoContextPool();
 
+  IoContextPool(const IoContextPool&) = delete;
+  IoContextPool& operator=(const IoContextPool&) = delete;
+
   IoContext* GetNextIoContext();
   void Start();
 
