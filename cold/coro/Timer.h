@@ -22,17 +22,21 @@ class Timer {
   Timer(const Timer&) = delete;
   Timer& operator=(const Timer&) = delete;
 
+  Timer(Timer&& other);
+  Timer& operator=(Timer&& other);
+
   Time GetExpiry() const { return expiry_; }
   void Cancel();
   bool IsReapted() const { return repeated_; }
-  virtual Time GetNextExpiry() { return {}; }
-  IoContext& GetIoContext() { return ioContext_; }
+  IoContext* GetIoContext() { return ioContext_; }
   size_t GetTimerId() const { return timerId_; }
+  bool Valid() const { return timerId_ > 0; }
 
  protected:
-  virtual Task<> GetTimerTask() = 0;
-  IoContext& ioContext_;
+  virtual std::function<Task<>()> GetTaskGenerator() = 0;
+  IoContext* ioContext_;
   Time expiry_;
+  std::chrono::milliseconds interval_;
 
  private:
   static std::atomic<size_t> timerCounter;
@@ -50,6 +54,9 @@ class SteadyTimer : public Timer {
   SteadyTimer(IoContext& ioContext) : Timer(ioContext, false) {}
   ~SteadyTimer() override = default;
 
+  SteadyTimer(SteadyTimer&&) = default;
+  SteadyTimer& operator=(SteadyTimer&&) = default;
+
   template <typename Period, typename Rep>
   void ExpiresAfter(std::chrono::duration<Period, Rep> duration) {
     ExpiresAt(Time::Now() + duration);
@@ -62,14 +69,16 @@ class SteadyTimer : public Timer {
   internal::SteadyTimerAwaitable<T> AsyncWaitable(Task<T> task);
 
  private:
-  Task<> GetTimerTask() override { return std::move(task_); }
+  std::function<Task<>()> GetTaskGenerator() override {
+    return [this]() -> Task<> { return std::move(task_); };
+  }
   Task<> task_;
 };
 
 namespace internal {
 
 template <typename T>
-class SteadyTimerAwaitable {
+class SteadyTimerAwaitable : public AwaitableNonCopyable {
  public:
   SteadyTimerAwaitable(SteadyTimer& timer, Task<T> task)
       : timer_(timer), task_(std::move(task)) {}
@@ -92,7 +101,7 @@ class SteadyTimerAwaitable {
 };
 
 template <>
-class SteadyTimerAwaitable<void> {
+class SteadyTimerAwaitable<void> : public AwaitableNonCopyable {
  public:
   SteadyTimerAwaitable(SteadyTimer& timer, Task<> task)
       : timer_(timer), task_(std::move(task)) {}
@@ -113,7 +122,7 @@ class SteadyTimerAwaitable<void> {
 };
 
 template <typename Period, typename Rep>
-class SleepAwaitable {
+class SleepAwaitable : public AwaitableNonCopyable {
  public:
   using Duration = std::chrono::duration<Period, Rep>;
 
@@ -161,16 +170,16 @@ class RepeatedTimer : public Timer {
 
   void AsyncWait(std::function<Task<>()> taskGenerator);
 
+  RepeatedTimer(RepeatedTimer&&) = default;
+  RepeatedTimer& operator=(RepeatedTimer&&) = default;
+
  private:
   void SetExpiryAndUpdate();
 
-  Time GetNextExpiry() override {
-    expiry_ += interval_;
-    return expiry_;
+  std::function<Task<>()> GetTaskGenerator() override {
+    return std::move(taskGenerator_);
   }
 
-  std::chrono::milliseconds interval_;
-  Task<> GetTimerTask() override { return taskGenerator_(); }
   std::function<Task<>()> taskGenerator_;
 };
 

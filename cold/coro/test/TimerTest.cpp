@@ -284,6 +284,61 @@ void TestTimerInMultiThread() {
   thread.Join();
 }
 
+void TestMoveTimer() {
+  LOG_INFO(g_logger, "In Testcase {}", __FUNCTION__);
+  IoContext ioContext;
+  SteadyTimer t1(ioContext), t2(ioContext);
+  t1.ExpiresAfter(std::chrono::milliseconds(10));
+  t1.AsyncWait([]() -> Task<> {
+    assert(false);
+    co_return;
+  }());
+  t1 = std::move(t2);
+  assert(!t2.GetIoContext());
+  assert(t2.GetTimerId() == 0);
+  auto task = [](IoContext& context, SteadyTimer timer) -> Task<void> {
+    timer.ExpiresAfter(std::chrono::seconds(1));
+    co_await timer.AsyncWaitable([]() -> Task<void> {
+      LOG_INFO(g_logger, "After Move");
+      co_return;
+    }());
+    context.Stop();
+    co_return;
+  }(ioContext, std::move(t1));
+  ioContext.CoSpawn(std::move(task));
+  assert(!t1.GetIoContext());
+  assert(t1.GetTimerId() == 0);
+  ioContext.Start();
+}
+
+void TestMoveRepeatedTimer() {
+  LOG_INFO(g_logger, "In Testcase {}", __FUNCTION__);
+  IoContext ioContext;
+  RepeatedTimer t1(ioContext), t2(ioContext);
+  t1.SetInterval(std::chrono::milliseconds(200));
+  t1.AsyncWait([]() -> Task<void> {
+    assert(false);
+    co_return;
+  });
+  t1 = std::move(t2);
+  assert(!t2.GetIoContext());
+  assert(t2.GetTimerId() == 0);
+  int count = 0;
+  t1.SetInterval(std::chrono::milliseconds(200));
+  t1.AsyncWait([&]() -> Task<void> {
+    LOG_INFO(g_logger, "RepeateTimer Run times:{}", ++count);
+    if (count == 5) t1.Cancel();
+    co_return;
+  });
+  ioContext.CoSpawn([](IoContext& context, RepeatedTimer timer) -> Task<void> {
+    co_await Sleep(context, std::chrono::seconds(1));
+    context.Stop();
+  }(ioContext, std::move(t1)));
+  assert(!t1.GetIoContext());
+  assert(t1.GetTimerId() == 0);
+  ioContext.Start();
+}
+
 int main() {
   LOG_INFO(g_logger, "-------------------------------------");
   TestBasicSteadyTimerUsage();
@@ -302,4 +357,7 @@ int main() {
   LOG_INFO(g_logger, "-------------------------------------");
   TestTimerInMultiThread();
   LOG_INFO(g_logger, "-------------------------------------");
+  TestMoveTimer();
+  LOG_INFO(g_logger, "-------------------------------------");
+  TestMoveRepeatedTimer();
 }

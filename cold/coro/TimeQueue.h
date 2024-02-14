@@ -19,7 +19,6 @@ class TimeQueue {
 
   void AddTimer(Timer& timer);
   void CancelTimer(Timer& timer);
-  // for update expiryTime
   void UpdateTimer(Timer& timer);
 
   // return wait time
@@ -30,9 +29,19 @@ class TimeQueue {
   struct TimerNode {
     size_t timerId;
     Time expiry;
-    Timer* timer;
-
+    std::function<Task<>()> taskGenerator;
+    bool repeated;
+    std::chrono::milliseconds interval;
     bool valid = true;
+
+    // void swap(TimerNode& other) {
+    //   std::swap(timerId, other.timerId);
+    //   std::swap(expiry, other.expiry);
+    //   taskGenerator.swap(other.taskGenerator);
+    //   std::swap(repeated, other.repeated);
+    //   std::swap(interval, other.interval);
+    //   std::swap(valid, other.valid);
+    // }
 
     bool operator>(const TimerNode& rhs) {
       if (expiry == rhs.expiry) {
@@ -41,7 +50,8 @@ class TimeQueue {
       return expiry > rhs.expiry;
     }
 
-    void invliad() { valid = false; }
+    Task<> GetTimerTask() { return taskGenerator(); }
+    void Invalid() { valid = false; }
   };
 
   void Fixup(size_t son);

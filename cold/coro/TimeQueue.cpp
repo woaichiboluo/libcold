@@ -7,7 +7,8 @@
 using namespace Cold::Base;
 
 void TimeQueue::AddTimer(Timer& timer) {
-  TimerNode node{timer.timerId_, timer.expiry_, &timer};
+  TimerNode node{timer.timerId_, timer.expiry_, timer.GetTaskGenerator(),
+                 timer.repeated_, timer.interval_};
   auto it = timerIdToIndexMap_.find(timer.timerId_);
   // not in pendingQueue
   if (it == timerIdToIndexMap_.end()) {
@@ -17,10 +18,7 @@ void TimeQueue::AddTimer(Timer& timer) {
     Fixup(last);
   } else {
     // in pendingQueue
-    LOG_WARN(GetMainLogger(),
-             "Multiple times call AsyncWait. Current Timer is already in "
-             "TimeQueue TimerId:{}",
-             timer.timerId_);
+    UpdateTimer(timer);
   }
 }
 
@@ -29,9 +27,9 @@ void TimeQueue::CancelTimer(Timer& timer) {
   // timer already complete
   if (it == timerIdToIndexMap_.end()) return;
   auto index = it->second;
-  assert(index < timeHeap_.size() && timeHeap_[index].timer == &timer &&
+  assert(index < timeHeap_.size() &&
          timeHeap_[index].timerId == timer.timerId_);
-  timeHeap_[index].invliad();
+  timeHeap_[index].Invalid();
 }
 
 void TimeQueue::UpdateTimer(Timer& timer) {
@@ -40,9 +38,13 @@ void TimeQueue::UpdateTimer(Timer& timer) {
     return;
   }
   auto index = it->second;
-  assert(index < timeHeap_.size() && timeHeap_[index].timer == &timer &&
+  assert(index < timeHeap_.size() &&
          timeHeap_[index].timerId == timer.timerId_);
   timeHeap_[index].expiry = timer.expiry_;
+  auto taskGenerator = timer.GetTaskGenerator();
+  if (taskGenerator) {
+    timeHeap_[index].taskGenerator = std::move(taskGenerator);
+  }
   FixDown(index);
   Fixup(index);
 }
@@ -75,10 +77,9 @@ int TimeQueue::HandleTimeout(std::vector<Task<>>& timeoutCoroutines) {
   while (!timeHeap_.empty() && now >= timeHeap_[0].expiry) {
     auto& node = timeHeap_[0];
     if (node.valid) {
-      assert(node.timer);
-      timeoutCoroutines.push_back(node.timer->GetTimerTask());
-      if (node.timer->repeated_) {
-        node.expiry = node.timer->GetNextExpiry();
+      timeoutCoroutines.push_back(node.GetTimerTask());
+      if (node.repeated) {
+        node.expiry += node.interval;
         FixDown(0);
         continue;
       }
