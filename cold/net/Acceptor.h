@@ -19,8 +19,15 @@ class Acceptor : public BasicSocket {
            bool reusePort);
   ~Acceptor() override;
 
+  Acceptor(Acceptor&&);
+  Acceptor& operator=(Acceptor&&);
+
   void Listen();
   Base::Task<std::optional<TcpSocket>> Accept();
+  template <typename PERIOD, typename REP>
+  auto AcceptWithTimeout(std::chrono::duration<PERIOD, REP> duration) {
+    return IoTimeoutAwaitable(Accept(), duration);
+  }
   void SetIoContextPool(Base::IoContextPool* pool) { pool_ = pool; }
 
  private:

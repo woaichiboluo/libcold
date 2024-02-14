@@ -41,6 +41,25 @@ Net::Acceptor::Acceptor(Base::IoContextPool& ioContextPool,
 
 Net::Acceptor::~Acceptor() { close(idleFd_); }
 
+Net::Acceptor::Acceptor(Acceptor&& other)
+    : BasicSocket(std::move(other)),
+      idleFd_(other.idleFd_),
+      pool_(other.pool_) {
+  other.idleFd_ = -1;
+  other.pool_ = nullptr;
+}
+
+Net::Acceptor& Net::Acceptor::operator=(Acceptor&& other) {
+  if (this == &other) return *this;
+  BasicSocket::operator=(std::move(other));
+  if (idleFd_ >= 0) close(idleFd_);
+  idleFd_ = other.idleFd_;
+  pool_ = other.pool_;
+  other.idleFd_ = -1;
+  other.pool_ = nullptr;
+  return *this;
+}
+
 void Net::Acceptor::Listen() { listen(fd_, SOMAXCONN); }
 
 Base::Task<std::optional<Net::TcpSocket>> Net::Acceptor::Accept() {
