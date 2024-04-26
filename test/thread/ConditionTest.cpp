@@ -15,7 +15,7 @@ Base::Condition g_condition(g_mutex);
 std::queue<int> g_sequence GUARDED_BY(g_mutex);
 int counter GUARDED_BY(g_mutex) = 0;
 
-void testTimeWait() {
+void TestTimeWait() {
   Base::LockGuard guard(g_mutex);
   auto before = Base::Time::Now();
   g_condition.WaitFor(std::chrono::milliseconds(300));
@@ -27,7 +27,7 @@ void testTimeWait() {
   assert(now1 - now >= std::chrono::milliseconds(500));
 }
 
-void produce() {
+void Produce() {
   for (int i = 0; i < 1000; ++i) {
     Base::LockGuard guard(g_mutex);
     while (g_sequence.size() >= 20) {
@@ -39,7 +39,7 @@ void produce() {
   }
 }
 
-void consume() {
+void Consume() {
   for (int i = 0; i < 1000; ++i) {
     Base::LockGuard guard(g_mutex);
     while (g_sequence.empty()) {
@@ -53,13 +53,13 @@ void consume() {
 }
 
 int main() {
-  Base::Thread t1(produce);
-  Base::Thread t2(consume);
+  Base::Thread t1(Produce);
+  Base::Thread t2(Consume);
   t1.Start();
   t2.Start();
   t1.Join();
   t2.Join();
   std::cout << "Begin test timewait" << std::endl;
-  testTimeWait();
+  TestTimeWait();
   std::cout << "Complete" << std::endl;
 }

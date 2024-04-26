@@ -12,7 +12,7 @@ Base::SharedMutex g_sharedMutex;
 int b GUARDED_BY(g_mutex) = 0;
 int c GUARDED_BY(g_sharedMutex) = 0;
 
-void count() {
+void Count() {
   for (int i = 0; i < 1000; ++i) {
     Base::LockGuard guard(g_mutex);
     ++b;
@@ -20,7 +20,7 @@ void count() {
   }
 }
 
-void count1() {
+void Count1() {
   for (int i = 0; i < 1000; ++i) {
     g_mutex.Lock();
     Base::LockGuard guard(g_mutex, Base::AdoptLock);
@@ -29,7 +29,7 @@ void count1() {
   }
 }
 
-void count2() {
+void Count2() {
   Base::LockGuard guard(g_mutex, Base::DeferLock);
   for (int i = 0; i < 1000; ++i) {
     guard.Lock();
@@ -39,7 +39,7 @@ void count2() {
   }
 }
 
-void count3() {
+void Count3() {
   for (int i = 0; i < 1000; ++i) {
     Base::SharedLockGuard guard(g_sharedMutex, Base::SharedLock);
     std::cout << "read:" << c << " " << Base::ThisThread::ThreadId()
@@ -47,7 +47,7 @@ void count3() {
   }
 }
 
-void count4() {
+void Count4() {
   for (int i = 0; i < 1000; ++i) {
     Base::SharedLockGuard guard(g_sharedMutex);
     ++c;
@@ -57,7 +57,7 @@ void count4() {
 }
 
 template <typename Callable>
-void run(Callable r) {
+void Run(Callable r) {
   std::vector<std::unique_ptr<Base::Thread>> threads;
   for (size_t i = 0; i < 4; ++i) {
     auto thread = std::make_unique<Base::Thread>(r);
@@ -70,11 +70,11 @@ void run(Callable r) {
 }
 
 int main() {
-  run(count);
-  run(count1);
-  run(count2);
-  Base::Thread t1(count4);
+  Run(Count);
+  Run(Count1);
+  Run(Count2);
+  Base::Thread t1(Count4);
   t1.Start();
-  run(count3);
+  Run(Count3);
   t1.Join();
 }
