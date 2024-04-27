@@ -40,3 +40,9 @@ target_link_libraries(ConditionTest PRIVATE cold)
 set_target_properties(ConditionTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/thread")
 
+# coro
+add_executable(TaskTest coro/TaskTest.cpp)
+target_link_libraries(TaskTest PRIVATE cold)
+set_target_properties(TaskTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/coro")
+add_test(NAME TaskTest COMMAND TaskTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/log)
