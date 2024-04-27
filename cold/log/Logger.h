@@ -5,7 +5,6 @@
 #include <memory>
 
 #include "cold/log/LogCommon.h"
-#include "cold/log/LogFormatter.h"
 #include "cold/thread/Lock.h"
 #include "cold/thread/Thread.h"
 #include "cold/time/Time.h"
