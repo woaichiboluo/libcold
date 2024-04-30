@@ -2,9 +2,10 @@
 
 #include <cassert>
 
-namespace Cold::Base {
+using namespace Cold;
 
-bool Time::FromExploded(bool isLocal, const TimeExploded& ex, Time* time) {
+bool Base::Time::FromExploded(bool isLocal, const TimeExploded& ex,
+                              Time* time) {
   struct tm t {};
   t.tm_year = ex.year - 1900;
   t.tm_mon = ex.month - 1;
@@ -25,7 +26,7 @@ bool Time::FromExploded(bool isLocal, const TimeExploded& ex, Time* time) {
   return false;
 }
 
-void Time::Exploded(TimeExploded* ex, bool isLocal) const {
+void Base::Time::Exploded(TimeExploded* ex, bool isLocal) const {
   const auto milliseconds = TimeSinceEpochMilliSeconds();
   int64_t seconds = milliseconds / kMillisecondsPerSecond;
   int64_t milli = milliseconds % kMillisecondsPerSecond;
@@ -48,7 +49,7 @@ void Time::Exploded(TimeExploded* ex, bool isLocal) const {
   ex->millisecond = static_cast<int>(milli);
 }
 
-std::string Time::Dump(bool isLocal) const {
+std::string Base::Time::Dump(bool isLocal) const {
   TimeExploded ex;
   char buf[64];
   if (isLocal) {
@@ -63,7 +64,7 @@ std::string Time::Dump(bool isLocal) const {
   return {buf, static_cast<size_t>(ret)};
 }
 
-struct timespec Time::ToTimespec() const {
+struct timespec Base::Time::ToTimespec() const {
   struct timespec ts;
   using std::chrono::duration_cast;
   using std::chrono::nanoseconds;
@@ -72,5 +73,3 @@ struct timespec Time::ToTimespec() const {
   ts.tv_nsec = nano - ts.tv_sec * Time::kNanoSecondsPerSecond;
   return ts;
 }
-
-}  // namespace Cold::Base

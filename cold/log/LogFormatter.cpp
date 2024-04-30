@@ -6,7 +6,13 @@
 #include <memory>
 #include <string_view>
 
-using namespace Cold::Base;
+#include "cold/log/LogCommon.h"
+
+using namespace Cold;
+
+using FlagFormatter = Base::FlagFormatter;
+using LogMessage = Base::LogMessage;
+using LogBuffer = Base::LogBuffer;
 
 class ThreadIdFormatter : public FlagFormatter {
  public:
@@ -166,11 +172,12 @@ class LocalTimeFormatter : public FlagFormatter {
 
  private:
   mutable time_t lastFormatSecond_ = 0;
-  mutable Time::TimeExploded cachedTimeExploded_;
+  mutable Base::Time::TimeExploded cachedTimeExploded_;
   mutable char timeBuf_[32] = "xxxx-xx-xx oo:oo:oo.ooo";
 };
 
-bool HandleFlag(char c, std::vector<LogFormatter::FlagFormatterPtr>& sequence) {
+bool HandleFlag(char c,
+                std::vector<Base::LogFormatter::FlagFormatterPtr>& sequence) {
   switch (c) {
     case 't':
       sequence.push_back(std::make_unique<ThreadIdFormatter>());
@@ -210,12 +217,12 @@ bool HandleFlag(char c, std::vector<LogFormatter::FlagFormatterPtr>& sequence) {
   }
 }
 
-LogFormatter::LogFormatter(std::string pattern, FlagMap flagMap)
+Base::LogFormatter::LogFormatter(std::string pattern, FlagMap flagMap)
     : pattern_(std::move(pattern)), flagMap_(std::move(flagMap)) {
   CompilePatternOrAbort();
 }
 
-bool LogFormatter::CompilePattern() {
+bool Base::LogFormatter::CompilePattern() {
   std::vector<FlagFormatterPtr> sequence;
   auto n = pattern_.size();
   std::string text;
@@ -247,7 +254,7 @@ bool LogFormatter::CompilePattern() {
   return true;
 }
 
-void LogFormatter::CompilePatternOrAbort() {
+void Base::LogFormatter::CompilePatternOrAbort() {
   if (!CompilePattern()) {
     fprintf(stderr, "compile pattern error! error pattern: %s\n",
             pattern_.data());
@@ -255,7 +262,7 @@ void LogFormatter::CompilePatternOrAbort() {
   }
 }
 
-LogFormatter::LogFormatterPtr LogFormatter::Clone() const {
+Base::LogFormatter::LogFormatterPtr Base::LogFormatter::Clone() const {
   FlagMap flagMap;
   for (const auto& [key, value] : flagMap_) {
     flagMap[key] = value->Clone();
@@ -263,7 +270,7 @@ LogFormatter::LogFormatterPtr LogFormatter::Clone() const {
   return std::make_unique<LogFormatter>(pattern_, std::move(flagMap));
 }
 
-void LogFormatter::SetPattern(std::string_view pattern) {
+void Base::LogFormatter::SetPattern(std::string_view pattern) {
   pattern_ = std::move(pattern);
   CompilePatternOrAbort();
 }

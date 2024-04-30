@@ -8,9 +8,9 @@
 #include "cold/log/sinks/StdoutSink.h"
 #include "cold/thread/Lock.h"
 
-using namespace Cold::Base;
+using namespace Cold;
 
-void Logger::SinkIt(const LogMessage& message) {
+void Base::Logger::SinkIt(const LogMessage& message) {
   if (loggerLevel_ == LogLevel::OFF) return;
 
   assert(message.level < LogLevel::OFF);
@@ -25,62 +25,62 @@ void Logger::SinkIt(const LogMessage& message) {
   if (message.level == LogLevel::FATAL) abort();
 }
 
-bool Logger::ShouldFlush(const LogMessage& message) const {
+bool Base::Logger::ShouldFlush(const LogMessage& message) const {
   return message.level != LogLevel::OFF && message.level >= flushLevel_.load();
 }
 
-void Logger::Flush() {
+void Base::Logger::Flush() {
   for (auto& sink : loggerSinks_) {
     sink->Flush();
   }
 }
 
-void Logger::SetPattern(std::string_view pattern) {
+void Base::Logger::SetPattern(std::string_view pattern) {
   for (auto& sink : loggerSinks_) {
     sink->SetPattern(pattern);
   }
 }
 
-void Logger::SetFormatter(LogFormatterPtr formatter) {
+void Base::Logger::SetFormatter(LogFormatterPtr formatter) {
   for (auto& sink : loggerSinks_) {
     sink->SetFormatter(formatter->Clone());
   }
 }
 
-LogManager::LogManager() {
+Base::LogManager::LogManager() {
   auto defaultSink = std::make_shared<StdoutLogSink>();
   mainLogger_ = std::make_shared<Logger>("main", defaultSink);
 }
 
-LogManager& LogManager::Instance() {
+Base::LogManager& Base::LogManager::Instance() {
   static LogManager manager;
   return manager;
 }
 
-LoggerPtr LogManager::GetMainLogger() {
+Base::LoggerPtr Base::LogManager::GetMainLogger() {
   LockGuard guard(mutex_);
   return mainLogger_;
 }
 
-void LogManager::SetMainLogger(LoggerPtr logger) {
+void Base::LogManager::SetMainLogger(LoggerPtr logger) {
   LockGuard guard(mutex_);
   mainLogger_ = logger;
 }
 
-Logger* LogManager::GetMainLoggerRaw() { return mainLogger_.get(); }
+Base::Logger* Base::LogManager::GetMainLoggerRaw() { return mainLogger_.get(); }
 
-LoggerPtr LogManager::GetLogger(const std::string& loggerName) {
+Base::LoggerPtr Base::LogManager::GetLogger(const std::string& loggerName) {
   LockGuard guard(mutex_);
   auto it = loggersMap_.find(loggerName);
   return it == loggersMap_.end() ? nullptr : it->second;
 }
 
-bool LogManager::RemoveLogger(const std::string& loggerName) {
+bool Base::LogManager::RemoveLogger(const std::string& loggerName) {
   LockGuard guard(mutex_);
   return loggersMap_.erase(loggerName);
 }
 
-void LogManager::AddLogger(LoggerPtr logger) {
+void Base::LogManager::AddLogger(LoggerPtr logger) {
   LockGuard guard(mutex_);
   loggersMap_[logger->GetName()] = logger;
 }
