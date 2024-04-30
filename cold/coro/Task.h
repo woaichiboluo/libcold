@@ -72,6 +72,8 @@ class TaskPromise<void> : public PromiseBase {
 
 template <typename T>
 class Task {
+  friend class IoService;
+
  public:
   using promise_type = Internal::TaskPromise<T>;
   using value_type = T;
