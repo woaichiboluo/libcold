@@ -63,12 +63,12 @@ void Base::IoWatcher::WakeUp() {
 
 void Base::IoWatcher::ListenEvent(int fd, Handle handle, uint32_t ev) {
   auto it = ioEvents_.find(fd);
-  assert(ev == EPOLLIN | ev == EPOLLOUT);
+  assert(ev == EPOLLIN || ev == EPOLLOUT);
   IoEvent event;
   int operation = 0;
   if (it != ioEvents_.end()) {
     event = it->second;
-    assert(event.fd = fd);
+    assert(event.fd == fd);
     assert(event.events != 0);
     assert(event.events != ev);
     operation = EPOLL_CTL_MOD;
