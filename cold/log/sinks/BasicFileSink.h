@@ -35,7 +35,7 @@ class BasicFileSink : public LogSink {
   void OpenFile(const char* mode) {
     fp_ = fopen(fileName_.data(), mode);
     if (!fp_) {
-      Base::ERROR("Open file error Reason:{}", ThisThread::ErrorMsg());
+      Base::ERROR("Open file error Reason: {}", ThisThread::ErrorMsg());
     }
   }
 
