@@ -1,0 +1,31 @@
+#ifndef COLD_NET_ACCEPTOR
+#define COLD_NET_ACCEPTOR
+
+#include "cold/coro/IoService.h"
+#include "cold/net/BasicSocket.h"
+
+namespace Cold::Net {
+class TcpSocket;
+
+class Acceptor : public BasicSocket {
+ public:
+  Acceptor(Base::IoService& service, const IpAddress& listenAddr,
+           bool reusePort);
+
+  ~Acceptor() override;
+
+  Acceptor(Acceptor&&);
+  Acceptor& operator=(Acceptor&&);
+
+  void Listen();
+
+  Base::Task<TcpSocket> Accept();
+  Base::Task<TcpSocket> Accept(Base::IoService& service);
+
+ private:
+  int idleFd_;
+};
+
+}  // namespace Cold::Net
+
+#endif /* COLD_NET_ACCEPTOR */

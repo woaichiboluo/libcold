@@ -6,6 +6,9 @@ set(
     log/LogFormatter.cpp
     coro/IoWatcher.cpp
     coro/IoService.cpp
+    net/IpAddress.cpp
+    net/BasicSocket.cpp
+    net/Acceptor.cpp
 )
 
 add_library(cold ${SOURCE})
