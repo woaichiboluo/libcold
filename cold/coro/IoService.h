@@ -52,7 +52,7 @@ class IoService {
   };
 
   template <typename T>
-  void WrapTask(Task<T> task);
+  Task<> WrapTask(Task<T> task);
 
   void AddTask(Task<> task);
 
@@ -70,7 +70,7 @@ class IoService {
 };
 
 template <typename T>
-void IoService::WrapTask(Task<T> task) {
+Task<> IoService::WrapTask(Task<T> task) {
   return [](Task<T> t, IoService* service) -> Task<> {
     co_await t;
     co_await TaskCompletionAwaitable(service);

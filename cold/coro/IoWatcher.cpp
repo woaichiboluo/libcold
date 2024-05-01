@@ -51,13 +51,12 @@ void Base::IoWatcher::StopListeningWriteEvent(int fd) {
 void Base::IoWatcher::StopListeningAll(int fd) {
   if (!ioEvents_.count(fd)) return;
   StopListeningEvent(fd, EPOLLIN | EPOLLOUT);
-  // triggle event ?
 }
 
 void Base::IoWatcher::WakeUp() {
   uint64_t value = 666;
   if (write(wakeUpFd_, &value, sizeof value) != sizeof value) {
-    Base::ERROR("WakeUp Error Reason:{}", ThisThread::ErrorMsg());
+    Base::ERROR("WakeUp Error reason: {}", ThisThread::ErrorMsg());
   }
 }
 
@@ -127,18 +126,28 @@ void Base::IoWatcher::HandleIoEvent(const IoEvent& event, int operation) {
   }
 }
 
+std::string DumpEpollEvent(uint32_t ev) {
+  std::string res;
+  if (ev & EPOLLIN) res += "EPOLLIN ";
+  if (ev & EPOLLOUT) res += "EPOLLOUT ";
+  if (ev & EPOLLHUP) res += "EPOLLHUP ";
+  if (ev & EPOLLPRI) res += "EPOLLPRI ";
+  if (ev & EPOLLERR) res += "EPOLLERR ";
+  return res;
+}
+
 const std::vector<std::coroutine_handle<>>& Base::IoWatcher::WatchIo(
     int waitMs) {
   activeCoroutines_.clear();
-  Base::TRACE("WatchIo current ioEvents size:{}", ioEvents_.size());
+  Base::TRACE("WatchIo current ioEvents size: {}", ioEvents_.size());
   const int epoll_result =
       epoll_wait(epollFd_, epollEvents_.data(),
                  static_cast<int>(epollEvents_.size()), waitMs);
   if (epoll_result < 0) {
-    Base::ERROR("epoll_wait error reson:{}", ThisThread::ErrorMsg());
+    Base::ERROR("epoll_wait error reson: {}", ThisThread::ErrorMsg());
   } else {
     size_t size = static_cast<size_t>(epoll_result);
-    Base::TRACE("WaitIo total active fd:{}", size);
+    Base::TRACE("WatchIo total active fd: {}", size);
     for (size_t i = 0; i < size; ++i) {
       auto& epollEvent = epollEvents_[i];
       auto events = epollEvent.events;
@@ -147,7 +156,10 @@ const std::vector<std::coroutine_handle<>>& Base::IoWatcher::WatchIo(
         HandleWakeUp();
         continue;
       }
-      assert(events == event.events);
+      Base::DEBUG(
+          "In WaitIo Current solve fd: {} ,in epoll events: {}, in ioEvents "
+          "events: {} ",
+          event.fd, DumpEpollEvent(events), DumpEpollEvent(event.events));
       const bool readable = (events & EPOLLIN) != 0;
       const bool writable = (events & EPOLLOUT) != 0;
       const bool disconnected = (events & (EPOLLHUP | EPOLLERR)) != 0;
@@ -161,9 +173,10 @@ const std::vector<std::coroutine_handle<>>& Base::IoWatcher::WatchIo(
         activeCoroutines_.push_back(event.writeHandle);
         event.writeHandle = std::noop_coroutine();
       }
-      Base::DEBUG("IoEvent Info fd:{} readable:{} writeable:{} disconnected:{}",
-                  event.fd, readable, writable, disconnected);
-      HandleIoEvent(event, events == 0 ? EPOLL_CTL_DEL : EPOLL_CTL_MOD);
+      Base::DEBUG(
+          "IoEvent Info fd: {}, readable: {}, writeable: {}, disconnected: {}",
+          event.fd, readable, writable, disconnected);
+      HandleIoEvent(event, event.events == 0 ? EPOLL_CTL_DEL : EPOLL_CTL_MOD);
     }
     if (epollEvents_.size() == size) epollEvents_.resize(size << 1);
   }
@@ -179,6 +192,6 @@ void Base::IoWatcher::HandleWakeUp() {
 }
 
 std::string Base::IoWatcher::IoEvent::Dump() {
-  return fmt::format("IoEvent(fd = {},Read = {},Write = {})", fd,
+  return fmt::format("IoEvent(fd: {}, Read: {}, Write: {})", fd,
                      events & EPOLLIN, events & EPOLLOUT);
 }

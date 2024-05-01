@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "cold/coro/IoWatcher.h"
+#include "cold/log/Logger.h"
 #include "cold/thread/Lock.h"
 #include "cold/thread/Thread.h"
 
@@ -44,6 +45,7 @@ void Base::IoService::Start() {
       assert(completion.done());
       awaitCompletionTasks_.erase(completion);
     }
+    Base::TRACE("awaitCompletionTasks size: {}", awaitCompletionTasks_.size());
   }
 }
 
