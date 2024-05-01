@@ -46,3 +46,31 @@ target_link_libraries(TaskTest PRIVATE cold)
 set_target_properties(TaskTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/coro")
 add_test(NAME TaskTest COMMAND TaskTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/log)
+
+# net
+add_executable(IpAddressTest net/IpAddressTest.cpp)
+target_link_libraries(IpAddressTest PRIVATE cold)
+set_target_properties(IpAddressTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
+add_test(NAME IpAddressTest COMMAND IpAddressTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/net)
+
+add_executable(SocketOptionsTest net/SocketOptionsTest.cpp)
+target_link_libraries(SocketOptionsTest PRIVATE cold)
+set_target_properties(SocketOptionsTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
+add_test(NAME SocketOptionsTest COMMAND SocketOptionsTest  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/net)
+
+add_executable(AcceptorTest net/AcceptorTest.cpp)
+target_link_libraries(AcceptorTest PRIVATE cold)
+set_target_properties(AcceptorTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
+
+add_executable(BasicEchoServerTest net/BasicEchoServerTest.cpp)
+target_link_libraries(BasicEchoServerTest PRIVATE cold)
+set_target_properties(BasicEchoServerTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
+
+add_executable(BasicUdpEchoServerTest net/BasicUdpEchoServerTest.cpp)
+target_link_libraries(BasicUdpEchoServerTest PRIVATE cold)
+set_target_properties(BasicUdpEchoServerTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
