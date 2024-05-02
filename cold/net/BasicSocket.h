@@ -84,6 +84,24 @@ class BasicSocket {
                             &localAddress_, &remoteAddress_);
   }
 
+  template <typename REP, typename PERIOD>
+  auto ReadWithTimeout(void* buf, size_t count,
+                       std::chrono::duration<REP, PERIOD> duration) {
+    return IoTimeoutAwaitable(ioService_, Read(buf, count), duration);
+  }
+
+  template <typename REP, typename PERIOD>
+  auto WriteWithTimeout(const void* buf, size_t count,
+                        std::chrono::duration<REP, PERIOD> duration) {
+    return IoTimeoutAwaitable(ioService_, Write(buf, count), duration);
+  }
+
+  template <typename REP, typename PERIOD>
+  auto ConnectWithTimeout(const IpAddress& remoteAddress,
+                          std::chrono::duration<REP, PERIOD> duration) {
+    return IoTimeoutAwaitable(ioService_, Connect(remoteAddress), duration);
+  }
+
  protected:
   Base::IoService* ioService_;
   int fd_ = -1;

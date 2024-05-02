@@ -1,15 +1,20 @@
 #ifndef COLD_NET_IOAWAITABLE
 #define COLD_NET_IOAWAITABLE
 
-#include <coroutine>
+#include <cerrno>
+#include <chrono>
 
 #include "cold/coro/IoService.h"
 #include "cold/coro/IoWatcher.h"
 #include "cold/net/IpAddress.h"
+#include "cold/time/Timer.h"
 
 namespace Cold::Net {
 
 class IoAwaitableBase {
+  template <typename AWAITABLE, typename REP, typename PERIOD>
+  friend class IoTimeoutAwaitable;
+
  public:
   enum IoType { READ, WRITE };
   IoAwaitableBase(Base::IoService* service, int fd, IoType type)
@@ -38,11 +43,19 @@ class IoAwaitableBase {
     }
   }
 
+  bool GetTimeout() const { return timeout_; }
+
   Base::IoService* service_;
   int fd_;
 
  private:
+  void SetTimeout() {
+    timeout_ = true;
+    StopListeningIo();
+  }
+
   IoType type_;
+  bool timeout_ = false;
 };
 
 class ReadAwaitable : public IoAwaitableBase {
@@ -58,8 +71,8 @@ class ReadAwaitable : public IoAwaitableBase {
   bool await_ready() noexcept { return !connected_; }
 
   ssize_t await_resume() noexcept {
-    if (!connected_) {
-      errno = ENOTCONN;
+    if (!connected_ || GetTimeout()) {
+      errno = GetTimeout() ? ETIMEDOUT : ENOTCONN;
       return -1;
     }
     auto n = read(fd_, buf_, count_);
@@ -91,8 +104,8 @@ class WriteAwaitable : public IoAwaitableBase {
   }
 
   ssize_t await_resume() noexcept {
-    if (!connected_) {
-      errno = ENOTCONN;
+    if (!connected_ || GetTimeout()) {
+      errno = GetTimeout() ? ETIMEDOUT : ENOTCONN;
       return -1;
     }
     if (ready_) return retValue_;
@@ -117,6 +130,10 @@ class AcceptAwaitable : public IoAwaitableBase {
   bool await_ready() noexcept { return false; }
 
   std::pair<int, IpAddress> await_resume() noexcept {
+    if (GetTimeout()) {
+      errno = ETIMEDOUT;
+      return {-1, IpAddress{}};
+    }
     socklen_t arrlen = sizeof(addr_);
     auto peer = accept4(fd_, reinterpret_cast<struct sockaddr*>(&addr_),
                         &arrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
@@ -147,6 +164,10 @@ class SendToAwaitable : public IoAwaitableBase {
   }
 
   ssize_t await_resume() noexcept {
+    if (GetTimeout()) {
+      errno = ETIMEDOUT;
+      return -1;
+    }
     if (ready_) return retValue_;
     return sendto(fd_, buf_, len_, flags_, dest_.GetSockaddr(), addrlen_);
   }
@@ -176,6 +197,10 @@ class RecvFromAwaitable : public IoAwaitableBase {
   bool await_ready() noexcept { return false; }
 
   ssize_t await_resume() noexcept {
+    if (GetTimeout()) {
+      errno = ETIMEDOUT;
+      return -1;
+    }
     return recvfrom(fd_, buf_, len_, flags_, source_->GetSockaddr(), &addrlen_);
   }
 
@@ -207,6 +232,10 @@ class ConnectAwaitable : public IoAwaitableBase {
   }
 
   int await_resume() noexcept {
+    if (GetTimeout()) {
+      errno = ETIMEDOUT;
+      return -1;
+    }
     if (!notInprogress_) {
       socklen_t len = sizeof(int);
       if (getsockopt(fd_, SOL_SOCKET, SO_ERROR, &retValue_, &len) == -1)
@@ -232,6 +261,52 @@ class ConnectAwaitable : public IoAwaitableBase {
   IpAddress* remoteAddress_;
   int retValue_ = 0;
   bool notInprogress_ = false;
+};
+
+template <typename AWAITABLE, typename REP, typename PERIOD>
+class IoTimeoutAwaitable {
+ public:
+  using Duration = std::chrono::duration<REP, PERIOD>;
+  using RetType =
+      std::invoke_result_t<decltype(&AWAITABLE::await_resume), AWAITABLE>;
+
+  IoTimeoutAwaitable(Base::IoService* service, AWAITABLE&& awaitable,
+                     Duration timeoutTime)
+      : service_(service),
+        awaitable_(std::move(awaitable)),
+        timeoutTime_(timeoutTime),
+        timer_(*service) {}
+  ~IoTimeoutAwaitable() = default;
+
+  bool await_ready() noexcept { return false; }
+
+  void await_suspend(std::coroutine_handle<> handle) noexcept {
+    auto task = [](std::coroutine_handle<> coro, RetType& retValue,
+                   AWAITABLE& awaitable) -> Base::Task<> {
+      retValue = co_await awaitable;
+      coro.resume();
+    }(handle, retValue_, awaitable_);
+    timer_.ExpiresAfter(timeoutTime_);
+    timer_.AsyncWait(
+        [](std::coroutine_handle<> coro, AWAITABLE& awaitable) -> Base::Task<> {
+          awaitable.SetTimeout();
+          coro.resume();
+          co_return;
+        }(task.GetHandle(), awaitable_));
+    service_->CoSpawn(std::move(task));
+  }
+
+  RetType await_resume() noexcept {
+    if (!awaitable_.GetTimeout()) timer_.Cancel();
+    return retValue_;
+  }
+
+ private:
+  Base::IoService* service_;
+  AWAITABLE awaitable_;
+  Duration timeoutTime_;
+  Base::Timer timer_;
+  RetType retValue_;
 };
 
 }  // namespace Cold::Net
