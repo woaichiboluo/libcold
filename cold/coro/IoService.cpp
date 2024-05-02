@@ -29,7 +29,7 @@ void Base::IoService::Start() {
     }
     for (auto& task : tasks) {
       auto newTask = WrapTask(std::move(task));
-      auto handle = newTask.handle_;
+      auto handle = newTask.GetHandle();
       awaitCompletionTasks_.insert({handle, std::move(newTask)});
       handle.resume();
     }
@@ -46,7 +46,7 @@ void Base::IoService::Start() {
       tasks.swap(pendingTasks_);
     }
     for (auto& task : tasks) {
-      auto handle = task.handle_;
+      auto handle = task.GetHandle();
       awaitCompletionTasks_.insert({handle, std::move(task)});
       handle.resume();
     }
