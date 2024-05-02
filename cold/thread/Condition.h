@@ -21,8 +21,8 @@ class Condition {
 
   void Wait() { pthread_cond_wait(&cond_, mutex_->NativeHandle()); }
 
-  template <typename Rep, typename Period>
-  void WaitFor(std::chrono::duration<Rep, Period> duration) {
+  template <typename REP, typename PERIOD>
+  void WaitFor(std::chrono::duration<REP, PERIOD> duration) {
     WaitUntil(Time::Now() + duration);
   }
 

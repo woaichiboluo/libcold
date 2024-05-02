@@ -45,8 +45,8 @@ class Timer {
   template <typename T>
   struct TimerAwaitable;
 
-  template <typename Rep, typename Duration>
-  void ExpiresAfter(std::chrono::duration<Rep, Duration> duration) {
+  template <typename REP, typename PERIOD>
+  void ExpiresAfter(std::chrono::duration<REP, PERIOD> duration) {
     ExpiresAt(Time::Now() + duration);
   }
 

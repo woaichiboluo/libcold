@@ -61,24 +61,24 @@ class Time {
 
   struct timespec ToTimespec() const;
 
-  template <typename Rep, class Period>
-  constexpr Time operator+(std::chrono::duration<Rep, Period> duration) const {
+  template <typename REP, typename PERIOD>
+  constexpr Time operator+(std::chrono::duration<REP, PERIOD> duration) const {
     return Time(timePoint_ + duration);
   }
 
-  template <typename Rep, class Period>
-  constexpr Time operator-(std::chrono::duration<Rep, Period> duration) const {
+  template <typename REP, typename PERIOD>
+  constexpr Time operator-(std::chrono::duration<REP, PERIOD> duration) const {
     return Time(timePoint_ - duration);
   }
 
-  template <typename Rep, class Period>
-  constexpr Time& operator+=(std::chrono::duration<Rep, Period> duration) {
+  template <typename REP, typename PERIOD>
+  constexpr Time& operator+=(std::chrono::duration<REP, PERIOD> duration) {
     timePoint_ += duration;
     return *this;
   }
 
-  template <typename Rep, class Period>
-  constexpr Time& operator-=(std::chrono::duration<Rep, Period> duration) {
+  template <typename REP, typename PERIOD>
+  constexpr Time& operator-=(std::chrono::duration<REP, PERIOD> duration) {
     timePoint_ -= duration;
     return *this;
   }
