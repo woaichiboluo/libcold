@@ -5,6 +5,11 @@ set_target_properties(TimeTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/time")
 add_test(NAME TimeTest COMMAND TimeTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/time)
 
+add_executable(TimerTest time/TimerTest.cpp)
+target_link_libraries(TimerTest PRIVATE cold)
+set_target_properties(TimerTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/time")
+
 # thread
 add_executable(LockTest thread/LockTest.cpp)
 target_link_libraries(LockTest PRIVATE cold)
