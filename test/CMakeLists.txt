@@ -23,7 +23,6 @@ set_target_properties(ThreadTest PROPERTIES
 add_test(NAME ThreadTest COMMAND ThreadTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/thread)
 
 # log 
-
 add_executable(LogFormatterTest log/LogFormatterTest.cpp)
 target_link_libraries(LogFormatterTest PRIVATE cold)
 set_target_properties(LogFormatterTest PROPERTIES
@@ -78,4 +77,14 @@ set_target_properties(BasicEchoServerTest PROPERTIES
 add_executable(BasicUdpEchoServerTest net/BasicUdpEchoServerTest.cpp)
 target_link_libraries(BasicUdpEchoServerTest PRIVATE cold)
 set_target_properties(BasicUdpEchoServerTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
+
+add_executable(ConnectWithTimeoutTest net/ConnectWithTimeoutTest.cpp)
+target_link_libraries(ConnectWithTimeoutTest PRIVATE cold)
+set_target_properties(ConnectWithTimeoutTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
+
+add_executable(IoTimeoutTest net/IoTimeoutTest.cpp)
+target_link_libraries(IoTimeoutTest PRIVATE cold)
+set_target_properties(IoTimeoutTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
