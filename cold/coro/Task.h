@@ -72,8 +72,6 @@ class TaskPromise<void> : public PromiseBase {
 
 template <typename T>
 class Task {
-  friend class IoService;
-
  public:
   using promise_type = Internal::TaskPromise<T>;
   using value_type = T;
@@ -110,6 +108,8 @@ class Task {
     assert(handle_ && handle_.done());
     return handle_.promise().Result();
   }
+
+  std::coroutine_handle<> GetHandle() const { return handle_; }
 
   auto operator co_await() const noexcept {
     assert(handle_);
