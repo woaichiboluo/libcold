@@ -9,6 +9,8 @@ set(
     net/IpAddress.cpp
     net/BasicSocket.cpp
     net/Acceptor.cpp
+    time/Timer.cpp
+    time/TimerQueue.cpp
 )
 
 add_library(cold ${SOURCE})
