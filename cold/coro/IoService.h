@@ -14,9 +14,12 @@
 namespace Cold::Base {
 
 class IoWatcher;
+class Timer;
+class TimerQueue;
 
 class IoService {
  public:
+  using Handle = std::coroutine_handle<>;
   IoService();
   ~IoService();
 
@@ -33,9 +36,11 @@ class IoService {
 
   IoWatcher* GetIoWatcher();
 
- private:
-  using Handle = std::coroutine_handle<>;
+  void AddTimer(Timer& timer);
+  void UpdateTimer(Timer& timer);
+  void CancelTimer(Timer& timer);
 
+ private:
   struct TaskCompletionAwaitable {
     TaskCompletionAwaitable(IoService* s) : service(s) {}
     bool await_ready() noexcept { return false; }
@@ -58,7 +63,9 @@ class IoService {
 
   std::atomic<bool> running_ = false;
   std::unique_ptr<IoWatcher> ioWatcher_;
-  const pid_t threadId_;
+
+  Mutex mutexForTimerQueue_;
+  std::unique_ptr<TimerQueue> timerQueue_ GUARDED_BY(mutexForTimerQueue_);
 
   Mutex mutexForPendingTasks_;
   std::vector<Task<>> pendingTasks_ GUARDED_BY(mutexForPendingTasks_);

@@ -6,13 +6,13 @@
 #include "cold/coro/IoWatcher.h"
 #include "cold/log/Logger.h"
 #include "cold/thread/Lock.h"
-#include "cold/thread/Thread.h"
+#include "cold/time/TimerQueue.h"
 
 using namespace Cold;
 
 Base::IoService::IoService()
     : ioWatcher_(std::make_unique<IoWatcher>()),
-      threadId_(ThisThread::ThreadId()) {}
+      timerQueue_(std::make_unique<TimerQueue>()) {}
 
 Base::IoService::~IoService() { assert(!running_); }
 
@@ -20,13 +20,27 @@ void Base::IoService::Start() {
   assert(!running_);
   running_ = true;
   while (running_) {
-    int waitTime = 500;
+    std::vector<Task<>> tasks;
+    // for timer event
+    int waitTime = 0;
+    {
+      LockGuard guard(mutexForTimerQueue_);
+      waitTime = timerQueue_->HandleTimeout(tasks);
+    }
+    for (auto& task : tasks) {
+      auto newTask = WrapTask(std::move(task));
+      auto handle = newTask.handle_;
+      awaitCompletionTasks_.insert({handle, std::move(newTask)});
+      handle.resume();
+    }
+    // for io event
     const auto& activeCoros = ioWatcher_->WatchIo(waitTime);
     for (const auto& coro : activeCoros) {
       assert(!coro.done());
       coro.resume();
     }
-    std::vector<Task<>> tasks;
+    // for pendingTasks
+    tasks.clear();
     {
       LockGuard guard(mutexForPendingTasks_);
       tasks.swap(pendingTasks_);
@@ -36,6 +50,7 @@ void Base::IoService::Start() {
       awaitCompletionTasks_.insert({handle, std::move(task)});
       handle.resume();
     }
+    // clear the completion
     std::vector<Handle> completions;
     {
       LockGuard guard(mutexForCompletionTasks_);
@@ -61,3 +76,18 @@ void Base::IoService::AddTask(Task<> task) {
 }
 
 Base::IoWatcher* Base::IoService::GetIoWatcher() { return ioWatcher_.get(); }
+
+void Base::IoService::AddTimer(Timer& timer) {
+  LockGuard guard(mutexForTimerQueue_);
+  timerQueue_->AddTimer(timer);
+}
+
+void Base::IoService::UpdateTimer(Timer& timer) {
+  LockGuard guard(mutexForTimerQueue_);
+  timerQueue_->UpdateTimer(timer);
+}
+
+void Base::IoService::CancelTimer(Timer& timer) {
+  LockGuard guard(mutexForTimerQueue_);
+  timerQueue_->CancelTimer(timer);
+}
