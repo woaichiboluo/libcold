@@ -7,6 +7,7 @@
 #include <coroutine>
 
 #include "cold/log/Logger.h"
+#include "cold/thread/Lock.h"
 
 using namespace Cold;
 
@@ -49,7 +50,10 @@ void Base::IoWatcher::StopListeningWriteEvent(int fd) {
 }
 
 void Base::IoWatcher::StopListeningAll(int fd) {
-  if (!ioEvents_.count(fd)) return;
+  {
+    LockGuard guard(mutexForIoEvents_);
+    if (!ioEvents_.count(fd)) return;
+  }
   StopListeningEvent(fd, EPOLLIN | EPOLLOUT);
 }
 
@@ -61,22 +65,22 @@ void Base::IoWatcher::WakeUp() {
 }
 
 void Base::IoWatcher::ListenEvent(int fd, Handle handle, uint32_t ev) {
-  auto it = ioEvents_.find(fd);
   assert(ev == EPOLLIN || ev == EPOLLOUT);
   IoEvent event;
-  int operation = 0;
-  if (it != ioEvents_.end()) {
-    event = it->second;
-    assert(event.fd == fd);
-    assert(event.events != 0);
-    assert(event.events != ev);
-    operation = EPOLL_CTL_MOD;
-    event.events |= ev;
-  } else {  // new event
-    assert(ev != 0);
-    event.fd = fd;
-    event.events = ev;
-    operation = EPOLL_CTL_ADD;
+  int operation = EPOLL_CTL_ADD;
+  event.fd = fd;
+  event.events = ev;
+  {
+    LockGuard guard(mutexForIoEvents_);
+    auto it = ioEvents_.find(fd);
+    if (it != ioEvents_.end()) {
+      event = it->second;
+      assert(event.fd == fd);
+      assert(event.events != 0);
+      assert(event.events != ev);
+      operation = EPOLL_CTL_MOD;
+      event.events |= ev;
+    }
   }
   if (ev == EPOLLIN) {
     event.readHandle = handle;
@@ -87,9 +91,13 @@ void Base::IoWatcher::ListenEvent(int fd, Handle handle, uint32_t ev) {
 }
 
 void Base::IoWatcher::StopListeningEvent(int fd, uint32_t disableEvent) {
-  auto it = ioEvents_.find(fd);
-  assert(it != ioEvents_.end());
-  auto event = it->second;
+  IoEvent event;
+  {
+    LockGuard guard(mutexForIoEvents_);
+    auto it = ioEvents_.find(fd);
+    assert(it != ioEvents_.end());
+    event = it->second;
+  }
   assert(event.events != 0);
   event.events &= ~disableEvent;
   if (disableEvent & EPOLLIN) {
@@ -103,6 +111,7 @@ void Base::IoWatcher::StopListeningEvent(int fd, uint32_t disableEvent) {
 }
 
 void Base::IoWatcher::HandleIoEvent(const IoEvent& event, int operation) {
+  LockGuard guard(mutexForIoEvents_);
   struct epoll_event ev;
   ev.events = event.events;
   IoEvent previous;
@@ -139,7 +148,6 @@ std::string DumpEpollEvent(uint32_t ev) {
 const std::vector<std::coroutine_handle<>>& Base::IoWatcher::WatchIo(
     int waitMs) {
   activeCoroutines_.clear();
-  Base::TRACE("WatchIo current ioEvents size: {}", ioEvents_.size());
   const int epoll_result =
       epoll_wait(epollFd_, epollEvents_.data(),
                  static_cast<int>(epollEvents_.size()), waitMs);
@@ -151,7 +159,11 @@ const std::vector<std::coroutine_handle<>>& Base::IoWatcher::WatchIo(
     for (size_t i = 0; i < size; ++i) {
       auto& epollEvent = epollEvents_[i];
       auto events = epollEvent.events;
-      IoEvent event = *static_cast<IoEvent*>(epollEvent.data.ptr);
+      IoEvent event;
+      {
+        LockGuard guard(mutexForIoEvents_);
+        event = *static_cast<IoEvent*>(epollEvent.data.ptr);
+      }
       if (event.fd == wakeUpFd_) {
         HandleWakeUp();
         continue;
