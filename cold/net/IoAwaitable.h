@@ -5,7 +5,7 @@
 #include <chrono>
 
 #include "cold/coro/IoService.h"
-#include "cold/coro/IoWatcher.h"
+#include "cold/coro/Task.h"
 #include "cold/net/IpAddress.h"
 #include "cold/time/Timer.h"
 
@@ -16,7 +16,7 @@ class IoAwaitableBase {
   friend class IoTimeoutAwaitable;
 
  public:
-  enum IoType { READ, WRITE };
+  enum IoType { kREAD, kWRITE };
   IoAwaitableBase(Base::IoService* service, int fd, IoType type)
       : service_(service), fd_(fd), type_(type) {}
 
@@ -28,18 +28,18 @@ class IoAwaitableBase {
 
  protected:
   void ListenIo(const std::coroutine_handle<>& handle) {
-    if (type_ == READ) {
-      service_->GetIoWatcher()->ListenReadEvent(fd_, handle);
+    if (type_ == kREAD) {
+      service_->ListenReadEvent(fd_, handle);
     } else {
-      service_->GetIoWatcher()->ListenWriteEvent(fd_, handle);
+      service_->ListenWriteEvent(fd_, handle);
     }
   }
 
   void StopListeningIo() {
-    if (type_ == READ) {
-      service_->GetIoWatcher()->StopListeningReadEvent(fd_);
+    if (type_ == kREAD) {
+      service_->StopListeningReadEvent(fd_);
     } else {
-      service_->GetIoWatcher()->StopListeningWriteEvent(fd_);
+      service_->StopListeningWriteEvent(fd_);
     }
   }
 
@@ -62,7 +62,7 @@ class ReadAwaitable : public IoAwaitableBase {
  public:
   ReadAwaitable(Base::IoService* service, int fd, void* buf, size_t count,
                 std::atomic<bool>& connected)
-      : IoAwaitableBase(service, fd, IoAwaitableBase::READ),
+      : IoAwaitableBase(service, fd, IoAwaitableBase::kREAD),
         buf_(buf),
         count_(count),
         connected_(connected) {}
@@ -89,7 +89,7 @@ class WriteAwaitable : public IoAwaitableBase {
  public:
   WriteAwaitable(Base::IoService* service, int fd, const void* buf,
                  size_t count, std::atomic<bool>& connected)
-      : IoAwaitableBase(service, fd, IoAwaitableBase::WRITE),
+      : IoAwaitableBase(service, fd, IoAwaitableBase::kWRITE),
         buf_(buf),
         count_(count),
         connected_(connected) {}
@@ -123,7 +123,7 @@ class WriteAwaitable : public IoAwaitableBase {
 class AcceptAwaitable : public IoAwaitableBase {
  public:
   AcceptAwaitable(Base::IoService* service, int fd)
-      : IoAwaitableBase(service, fd, IoAwaitableBase::READ) {}
+      : IoAwaitableBase(service, fd, IoAwaitableBase::kREAD) {}
 
   ~AcceptAwaitable() override = default;
 
@@ -148,7 +148,7 @@ class SendToAwaitable : public IoAwaitableBase {
  public:
   SendToAwaitable(Base::IoService* service, int fd, const void* buf, size_t len,
                   const IpAddress& addr, int flags)
-      : IoAwaitableBase(service, fd, IoAwaitableBase::WRITE),
+      : IoAwaitableBase(service, fd, IoAwaitableBase::kWRITE),
         buf_(buf),
         len_(len),
         dest_(addr),
@@ -186,7 +186,7 @@ class RecvFromAwaitable : public IoAwaitableBase {
  public:
   RecvFromAwaitable(Base::IoService* service, int fd, void* buf, size_t len,
                     IpAddress& addr, int flags)
-      : IoAwaitableBase(service, fd, IoAwaitableBase::READ),
+      : IoAwaitableBase(service, fd, IoAwaitableBase::kREAD),
         buf_(buf),
         len_(len),
         source_(&addr),
@@ -217,7 +217,7 @@ class ConnectAwaitable : public IoAwaitableBase {
   ConnectAwaitable(Base::IoService* service, int fd, const IpAddress& ip,
                    std::atomic<bool>* connected, IpAddress* localAddress,
                    IpAddress* remoteAddress)
-      : IoAwaitableBase(service, fd, IoAwaitableBase::WRITE),
+      : IoAwaitableBase(service, fd, IoAwaitableBase::kWRITE),
         ipAddress_(ip),
         connected_(connected),
         localAddress_(localAddress),
