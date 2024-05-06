@@ -5,13 +5,8 @@
 
 #include <atomic>
 
-#include "cold/coro/IoService.h"
 #include "cold/net/IoAwaitable.h"
 #include "cold/net/IpAddress.h"
-
-namespace Cold::Base {
-class IoService;
-}
 
 namespace Cold::Net {
 
