@@ -11,7 +11,7 @@
 using namespace Cold;
 
 Net::IpAddress::IpAddress(std::string_view address, uint16_t port, bool ipv6) {
-  int ret = 0;
+  [[maybe_unused]] int ret = 0;
   if (ipv6) {
     ipv6Addr_.sin6_family = AF_INET6;
     ret = inet_pton(AF_INET6, address.data(), &ipv6Addr_.sin6_addr);
@@ -45,7 +45,7 @@ void Net::IpAddress::SetScopeId(uint32_t scope_id) {
 
 std::string Net::IpAddress::GetIp() const {
   char buf[256] = {'['};
-  const char* end = nullptr;
+  [[maybe_unused]] const char* end = nullptr;
   if (GetFamily() == AF_INET) {
     end = inet_ntop(AF_INET, &ipv4Addr_.sin_addr.s_addr, buf, sizeof buf);
     assert(end != nullptr);
