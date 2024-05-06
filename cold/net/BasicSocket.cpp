@@ -1,10 +1,26 @@
 #include "cold/net/BasicSocket.h"
 
+#include <sys/signal.h>
 #include <unistd.h>
 
 #include <cassert>
 
 using namespace Cold;
+
+namespace {
+class IgnoreSigPipe {
+ public:
+  IgnoreSigPipe() {
+    ::signal(SIGPIPE, SIG_IGN);
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGPIPE);
+    sigprocmask(SIG_BLOCK, &set, nullptr);
+  }
+};
+
+IgnoreSigPipe __;
+}  // namespace
 
 Net::BasicSocket::~BasicSocket() {
   if (fd_ >= 0) close(fd_);
