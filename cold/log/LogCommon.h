@@ -4,10 +4,8 @@
 #include <source_location>
 #include <string_view>
 
-#define FMT_HEADER_ONLY
-
 #include "cold/time/Time.h"
-#include "third_party/fmt/include/fmt/core.h"
+#include "third_party/fmt/include/fmt/format.h"
 
 namespace Cold::Base {
 
