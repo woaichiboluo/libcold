@@ -38,6 +38,17 @@ class TcpSocket : public Net::BasicSocket {
     BasicSocket::Close();
     connected_ = false;
   }
+
+  Base::Task<ssize_t> WriteN(const char* buf, size_t n) {
+    size_t byteAlreadyWrite = 0;
+    while (byteAlreadyWrite < n) {
+      auto writed =
+          co_await Write(buf + byteAlreadyWrite, n - byteAlreadyWrite);
+      if (writed < 0) co_return writed;
+      byteAlreadyWrite += n;
+    }
+    co_return static_cast<ssize_t>(n);
+  }
 };
 
 }  // namespace Cold::Net
