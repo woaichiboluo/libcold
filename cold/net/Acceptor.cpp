@@ -6,6 +6,7 @@
 #include "cold/log/Logger.h"
 #include "cold/net/SocketOptions.h"
 #include "cold/net/TcpSocket.h"
+#include "cold/thread/Thread.h"
 
 using namespace Cold;
 
@@ -47,13 +48,15 @@ Net::Acceptor& Net::Acceptor::operator=(Acceptor&& other) {
 }
 
 Base::Task<Net::TcpSocket> Net::Acceptor::Accept() {
+  assert(listened_);
   return Accept(*ioService_);
 }
 
 Base::Task<Net::TcpSocket> Net::Acceptor::Accept(Base::IoService& service) {
+  assert(listened_);
   auto [sockfd, addr] = co_await AcceptAwaitable(ioService_, fd_);
   if (sockfd < 0) {
-    Base::ERROR("Accept Error. errno: {},reason: {}", errno,
+    Base::ERROR("Accept Error. errno: {}, reason: {}", errno,
                 Base::ThisThread::ErrorMsg());
     if (errno == EMFILE) {
       close(idleFd_);
@@ -65,4 +68,10 @@ Base::Task<Net::TcpSocket> Net::Acceptor::Accept(Base::IoService& service) {
   co_return Net::TcpSocket(service, localAddress_, addr, sockfd);
 }
 
-void Net::Acceptor::Listen() { listen(fd_, SOMAXCONN); }
+void Net::Acceptor::Listen() {
+  if (listen(fd_, SOMAXCONN) < 0) {
+    Base::FATAL("listen error. errno = {}, reason = {}", errno,
+                Base::ThisThread::ErrorMsg());
+  }
+  listened_ = true;
+}

@@ -19,11 +19,14 @@ class Acceptor : public BasicSocket {
 
   void Listen();
 
+  bool GetListened() const { return listened_; }
+
   Base::Task<TcpSocket> Accept();
   Base::Task<TcpSocket> Accept(Base::IoService& service);
 
  private:
   int idleFd_;
+  bool listened_ = false;
 };
 
 }  // namespace Cold::Net
