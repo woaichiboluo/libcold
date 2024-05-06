@@ -34,11 +34,15 @@ class IoService {
     AddTask(WrapTask(std::move(coro)));
   }
 
-  IoWatcher* GetIoWatcher();
-
   void AddTimer(Timer& timer);
   void UpdateTimer(Timer& timer);
   void CancelTimer(Timer& timer);
+
+  void ListenReadEvent(int fd, const Handle& handle);
+  void ListenWriteEvent(int fd, const Handle& handle);
+  void StopListeningReadEvent(int fd);
+  void StopListeningWriteEvent(int fd);
+  void StopListeningAll(int fd);
 
  private:
   struct TaskCompletionAwaitable {

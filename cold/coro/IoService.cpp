@@ -75,8 +75,6 @@ void Base::IoService::AddTask(Task<> task) {
   ioWatcher_->WakeUp();
 }
 
-Base::IoWatcher* Base::IoService::GetIoWatcher() { return ioWatcher_.get(); }
-
 void Base::IoService::AddTimer(Timer& timer) {
   LockGuard guard(mutexForTimerQueue_);
   timerQueue_->AddTimer(timer);
@@ -90,4 +88,24 @@ void Base::IoService::UpdateTimer(Timer& timer) {
 void Base::IoService::CancelTimer(Timer& timer) {
   LockGuard guard(mutexForTimerQueue_);
   timerQueue_->CancelTimer(timer);
+}
+
+void Base::IoService::ListenReadEvent(int fd, const Handle& handle) {
+  ioWatcher_->ListenReadEvent(fd, handle);
+}
+
+void Base::IoService::ListenWriteEvent(int fd, const Handle& handle) {
+  ioWatcher_->ListenWriteEvent(fd, handle);
+}
+
+void Base::IoService::StopListeningReadEvent(int fd) {
+  ioWatcher_->StopListeningReadEvent(fd);
+}
+
+void Base::IoService::StopListeningWriteEvent(int fd) {
+  ioWatcher_->StopListeningWriteEvent(fd);
+}
+
+void Base::IoService::StopListeningAll(int fd) {
+  ioWatcher_->StopListeningAll(fd);
 }
