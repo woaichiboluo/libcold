@@ -6,6 +6,7 @@ set(
     log/LogFormatter.cpp
     coro/IoWatcher.cpp
     coro/IoService.cpp
+    coro/IoServicePool.cpp
     net/IpAddress.cpp
     net/BasicSocket.cpp
     net/Acceptor.cpp
