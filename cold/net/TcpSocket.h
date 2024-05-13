@@ -39,13 +39,24 @@ class TcpSocket : public Net::BasicSocket {
     connected_ = false;
   }
 
-  Base::Task<ssize_t> WriteN(const char* buf, size_t n) {
+  [[nodiscard]] Base::Task<ssize_t> ReadN(char* buf, size_t n) {
+    size_t byteAlreadyRead = 0;
+    while (byteAlreadyRead < n) {
+      auto ret = co_await Read(buf + byteAlreadyRead, n - byteAlreadyRead);
+      if (ret <= 0) co_return ret;
+      byteAlreadyRead += static_cast<size_t>(ret);
+    }
+    co_return static_cast<ssize_t>(n);
+  }
+
+  [[nodiscard]] Base::Task<ssize_t> WriteN(const char* buf, size_t n) {
+    ioService_->CoSpawn(
+        [](TcpSocket* socket) -> Base::Task<> { co_return; }(this));
     size_t byteAlreadyWrite = 0;
     while (byteAlreadyWrite < n) {
-      auto writed =
-          co_await Write(buf + byteAlreadyWrite, n - byteAlreadyWrite);
-      if (writed < 0) co_return writed;
-      byteAlreadyWrite += n;
+      auto ret = co_await Write(buf + byteAlreadyWrite, n - byteAlreadyWrite);
+      if (ret < 0) co_return ret;
+      byteAlreadyWrite += static_cast<size_t>(ret);
     }
     co_return static_cast<ssize_t>(n);
   }
