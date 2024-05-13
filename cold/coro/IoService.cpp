@@ -21,6 +21,17 @@ void Base::IoService::Start() {
   running_ = true;
   while (running_) {
     std::vector<Task<>> tasks;
+    // for pendingTasks
+    {
+      LockGuard guard(mutexForPendingTasks_);
+      tasks.swap(pendingTasks_);
+    }
+    for (auto& task : tasks) {
+      auto handle = task.GetHandle();
+      awaitCompletionTasks_.insert({handle, std::move(task)});
+      handle.resume();
+    }
+    tasks.clear();
     // for timer event
     int waitTime = 0;
     {
@@ -38,17 +49,6 @@ void Base::IoService::Start() {
     for (const auto& coro : activeCoros) {
       assert(!coro.done());
       coro.resume();
-    }
-    // for pendingTasks
-    tasks.clear();
-    {
-      LockGuard guard(mutexForPendingTasks_);
-      tasks.swap(pendingTasks_);
-    }
-    for (auto& task : tasks) {
-      auto handle = task.GetHandle();
-      awaitCompletionTasks_.insert({handle, std::move(task)});
-      handle.resume();
     }
     // clear the completion
     std::vector<Handle> completions;
