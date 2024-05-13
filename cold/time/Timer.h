@@ -61,7 +61,7 @@ class Timer {
   void Cancel();
 
   template <typename T>
-  TimerAwaitable<T> AsyncWaitable(Task<T> task);
+  [[nodiscard]] TimerAwaitable<T> AsyncWaitable(Task<T> task);
 
  private:
   static size_t numCreated_;

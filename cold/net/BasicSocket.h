@@ -66,34 +66,36 @@ class BasicSocket {
                       &option.len) == 0;
   }
 
-  auto Read(void* buf, size_t count) {
+  [[nodiscard]] auto Read(void* buf, size_t count) {
     return ReadAwaitable(ioService_, fd_, buf, count, connected_);
   }
 
-  auto Write(const void* buf, size_t count) {
+  [[nodiscard]] auto Write(const void* buf, size_t count) {
     return WriteAwaitable(ioService_, fd_, buf, count, connected_);
   }
 
-  auto Connect(const IpAddress& address) {
+  [[nodiscard]] auto Connect(const IpAddress& address) {
     return ConnectAwaitable(ioService_, fd_, address, &connected_,
                             &localAddress_, &remoteAddress_);
   }
 
   template <typename REP, typename PERIOD>
-  auto ReadWithTimeout(void* buf, size_t count,
-                       std::chrono::duration<REP, PERIOD> duration) {
+  [[nodiscard]] auto ReadWithTimeout(
+      void* buf, size_t count, std::chrono::duration<REP, PERIOD> duration) {
     return IoTimeoutAwaitable(ioService_, Read(buf, count), duration);
   }
 
   template <typename REP, typename PERIOD>
-  auto WriteWithTimeout(const void* buf, size_t count,
-                        std::chrono::duration<REP, PERIOD> duration) {
+  [[nodiscard]] auto WriteWithTimeout(
+      const void* buf, size_t count,
+      std::chrono::duration<REP, PERIOD> duration) {
     return IoTimeoutAwaitable(ioService_, Write(buf, count), duration);
   }
 
   template <typename REP, typename PERIOD>
-  auto ConnectWithTimeout(const IpAddress& remoteAddress,
-                          std::chrono::duration<REP, PERIOD> duration) {
+  [[nodiscard]] auto ConnectWithTimeout(
+      const IpAddress& remoteAddress,
+      std::chrono::duration<REP, PERIOD> duration) {
     return IoTimeoutAwaitable(ioService_, Connect(remoteAddress), duration);
   }
 
