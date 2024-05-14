@@ -6,9 +6,11 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "cold/net/Endian.h"
+
 class ChatMessage {
  public:
-  static constexpr std::size_t kHeaderLength = 4;
+  static constexpr std::size_t kHeaderLength = sizeof(uint32_t);
   static constexpr std::size_t kMaxBodyLength = 512;
 
   ChatMessage() : bodyLength_(0) {}
@@ -31,9 +33,9 @@ class ChatMessage {
   }
 
   bool DecodeHeader() {
-    char header[kHeaderLength + 1] = "";
-    std::strncat(header, data_, kHeaderLength);
-    bodyLength_ = static_cast<size_t>(std::atoi(header));
+    uint32_t value = 0;
+    std::memcpy(&value, data_, kHeaderLength);
+    bodyLength_ = Cold::Net::Network32ToHost32(value);
     if (bodyLength_ > kMaxBodyLength) {
       bodyLength_ = 0;
       return false;
@@ -42,9 +44,9 @@ class ChatMessage {
   }
 
   void EncodeHeader() {
-    char header[kHeaderLength + 1] = "";
-    std::sprintf(header, "%4d", static_cast<int>(bodyLength_));
-    std::memcpy(data_, header, kHeaderLength);
+    auto value =
+        Cold::Net::Host32ToNetwork32(static_cast<uint32_t>(bodyLength_));
+    std::memcpy(data_, &value, kHeaderLength);
   }
 
  private:
