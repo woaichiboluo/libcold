@@ -88,3 +88,10 @@ add_executable(IoTimeoutTest net/IoTimeoutTest.cpp)
 target_link_libraries(IoTimeoutTest PRIVATE cold)
 set_target_properties(IoTimeoutTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
+
+#util
+add_executable(ConfigTest util/ConfigTest.cpp)
+target_link_libraries(ConfigTest PRIVATE cold)
+add_test(NAME ConfigTest COMMAND ConfigTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/util)
+set_target_properties(ConfigTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/util")
