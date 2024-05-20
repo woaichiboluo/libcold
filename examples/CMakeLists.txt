@@ -18,3 +18,6 @@ target_link_libraries(AsioChatRoomServer PRIVATE cold)
 
 add_executable(AsioChatRoomClient asio/chatroom/ChatClient.cpp)
 target_link_libraries(AsioChatRoomClient PRIVATE cold)
+
+add_executable(ShellColorShow util/ShellColorShow.cpp)
+target_link_libraries(ShellColorShow PRIVATE cold)
