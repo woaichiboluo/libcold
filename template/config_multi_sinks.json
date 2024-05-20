@@ -1,0 +1,22 @@
+{
+    "logs": {
+        "name": "main-logger",
+        "level": "info",
+        "flush-level": "error",
+        "pattern": "%T %L <%N:%t> %c [%b:%l]%n",
+        "sinks": [
+            {
+                "type": "basicfilesink",
+                "arg1": "cur.log",
+                "arg2": true
+            },
+            {
+                "type": "stdoutcolorsink",
+                "pattern": "%T %C%L%E <%N:%t> %c [%b:%l]%n"
+            }
+        ]
+    },
+    "http": {
+        "timeoutms": 1000
+    }
+}

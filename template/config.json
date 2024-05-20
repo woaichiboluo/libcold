@@ -1,0 +1,10 @@
+{
+    "logs": {
+        "name": "main-logger",
+        "level": "info",
+        "flush-level": "error"
+    },
+    "http": {
+        "timeoutms": 1000
+    }
+}
