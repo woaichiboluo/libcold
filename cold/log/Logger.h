@@ -128,7 +128,8 @@ struct Trace {
   }
 };
 template <typename... Args>
-Trace(fmt::format_string<Args...> fmt, Args &&...args) -> Trace<Args...>;
+Trace(const LoggerPtr &logger, fmt::format_string<Args...> fmt, Args &&...args)
+    -> Trace<Args...>;
 
 template <typename... Args>
 struct Debug {
@@ -138,7 +139,8 @@ struct Debug {
   }
 };
 template <typename... Args>
-Debug(fmt::format_string<Args...> fmt, Args &&...args) -> Debug<Args...>;
+Debug(const LoggerPtr &logger, fmt::format_string<Args...> fmt, Args &&...args)
+    -> Debug<Args...>;
 
 template <typename... Args>
 struct Info {
@@ -148,7 +150,8 @@ struct Info {
   }
 };
 template <typename... Args>
-Info(fmt::format_string<Args...> fmt, Args &&...args) -> Info<Args...>;
+Info(const LoggerPtr &logger, fmt::format_string<Args...> fmt, Args &&...args)
+    -> Info<Args...>;
 
 template <typename... Args>
 struct Warn {
@@ -158,7 +161,8 @@ struct Warn {
   }
 };
 template <typename... Args>
-Warn(fmt::format_string<Args...> fmt, Args &&...args) -> Warn<Args...>;
+Warn(const LoggerPtr &logger, fmt::format_string<Args...> fmt, Args &&...args)
+    -> Warn<Args...>;
 
 template <typename... Args>
 struct Error {
@@ -168,7 +172,8 @@ struct Error {
   }
 };
 template <typename... Args>
-Error(fmt::format_string<Args...> fmt, Args &&...args) -> Error<Args...>;
+Error(const LoggerPtr &logger, fmt::format_string<Args...> fmt, Args &&...args)
+    -> Error<Args...>;
 
 template <typename... Args>
 struct Fatal {
@@ -178,7 +183,8 @@ struct Fatal {
   }
 };
 template <typename... Args>
-Fatal(fmt::format_string<Args...> fmt, Args &&...args) -> Fatal<Args...>;
+Fatal(const LoggerPtr &logger, fmt::format_string<Args...> fmt, Args &&...args)
+    -> Fatal<Args...>;
 
 /// for default logger use raw ptr do log
 template <typename... Args>
