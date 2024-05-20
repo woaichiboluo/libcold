@@ -37,9 +37,7 @@ class LogFormatter {
   using LogFormatterPtr = std::unique_ptr<LogFormatter>;
   using FlagMap = std::unordered_map<char, CustomFlagFormatterPtr>;
 
-  static constexpr const char* kDefaultPattern = "%T %L <%N:%t> %c [%b:%l]%n";
-
-  LogFormatter(std::string pattern = kDefaultPattern, FlagMap flagMap = {});
+  LogFormatter(std::string pattern, FlagMap flagMap = {});
   ~LogFormatter() = default;
 
   LogFormatter(const LogFormatter&) = delete;

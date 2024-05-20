@@ -25,7 +25,7 @@ TEST_CASE("test one flag") {
   constexpr Base::LocationWrapper wrapper;
   g_message.location = wrapper.location;
   g_message.baseName = wrapper.baseName;
-  Base::LogFormatter formatter;
+  Base::LogFormatter formatter("", {});
   Base::LogBuffer buffer;
   // thread id
   buffer.clear();
@@ -146,7 +146,7 @@ TEST_CASE("test multiple flag") {
   g_message.level = Base::LogLevel::INFO;
   auto now = Base::Time::Now();
   g_message.logTime = now;
-  Base::LogFormatter formatter;
+  Base::LogFormatter formatter("", {});
   formatter.SetPattern("%n %N %m %t %L %b %c %% %f%T%l");
   std::string expect =
       "\n main test 666 INFO  LogFormatterTest.cpp test logline % ";

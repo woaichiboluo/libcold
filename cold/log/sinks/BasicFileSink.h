@@ -5,8 +5,7 @@
 #include <chrono>
 #include <cstdio>
 
-#include "cold/log/LogFormatter.h"
-#include "cold/log/Logger.h"
+#include "cold/log/LogFactory.h"
 #include "cold/log/sinks/LogSink.h"
 
 namespace Cold::Base {
@@ -14,7 +13,7 @@ namespace Cold::Base {
 class BasicFileSink : public LogSink {
  public:
   constexpr static std::chrono::seconds kFlushInterval =
-      std::chrono::seconds(15);
+      std::chrono::seconds(5);
 
   explicit BasicFileSink(std::string fileName, bool append = false)
       : fileName_(std::move(fileName)) {
@@ -64,8 +63,15 @@ class BasicFileSink : public LogSink {
  private:
   std::string fileName_;
   FILE* fp_ = nullptr;
-  Time lastFlushTime_ = Time::Now();
+  Time lastFlushTime_;
 };
+
+inline std::shared_ptr<Logger> MakeBasicFileLogger(std::string loggerName,
+                                                   std::string fileName,
+                                                   bool append = false) {
+  return LoggerFactory::MakeLogger<BasicFileSink>(std::move(loggerName),
+                                                  std::move(fileName), append);
+}
 
 };  // namespace Cold::Base
 

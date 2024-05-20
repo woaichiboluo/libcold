@@ -1,12 +1,15 @@
 #include "cold/log/Logger.h"
 
+#include <strings.h>
+
 #include <cassert>
 #include <cstdlib>
 #include <memory>
 
 #include "cold/log/LogCommon.h"
-#include "cold/log/sinks/StdoutSink.h"
+#include "cold/log/LogSinkFactory.h"
 #include "cold/thread/Lock.h"
+#include "cold/util/Config.h"
 
 using namespace Cold;
 
@@ -48,8 +51,62 @@ void Base::Logger::SetFormatter(LogFormatterPtr formatter) {
 }
 
 Base::LogManager::LogManager() {
-  auto defaultSink = std::make_shared<StdoutLogSink>();
-  mainLogger_ = std::make_shared<Logger>("main", defaultSink);
+  auto& config = Config::GetGloablDefaultConfig();
+  // get config
+  auto name = config.GetOrDefault("/logs/name", std::string("main-logger"));
+  auto level = config.GetOrDefault("/logs/level", std::string("info"));
+  auto flushLevel =
+      config.GetOrDefault("/logs/level", std::string("flush-level"));
+  auto loggerPattern = config.GetOrDefault("/logs/pattern", std::string(""));
+  // set sinks
+  if (config.Contains("/logs/sinks")) {
+    assert(config.GetConfig("/logs/sinks").is_array());
+    std::vector<SinkPtr> sinks;
+    auto allSinksConfig = config.GetConfig("/logs/sinks");
+    for (const auto& sinkConfig : allSinksConfig) {
+      // get type and pattern
+      auto type = sinkConfig["type"];
+      assert(!type.empty());
+      std::string pattern;
+      if (sinkConfig.contains("pattern")) pattern = sinkConfig["pattern"];
+      // get args
+      std::vector<std::variant<int, bool, std::string>> args;
+      for (int j = 1;; ++j) {
+        auto argsPrefix = "arg" + std::to_string(j);
+        if (!sinkConfig.contains(argsPrefix)) break;
+        if (sinkConfig[argsPrefix].is_string()) {
+          args.push_back(sinkConfig[argsPrefix].get<std::string>());
+        } else if (sinkConfig[argsPrefix].is_boolean()) {
+          args.push_back(sinkConfig[argsPrefix].get<bool>());
+        } else {
+          args.push_back(sinkConfig[argsPrefix].get<int>());
+        }
+      }
+      // make logsink
+      auto ptr = LogSinkFactory::MakeSink(type, pattern, args);
+      // sink pattern but loggerPattern not empty use loggerPattern
+      if (pattern.empty() && !loggerPattern.empty())
+        ptr->SetPattern(loggerPattern);
+      sinks.push_back(std::move(ptr));
+    }
+    mainLogger_ =
+        std::make_shared<Logger>(std::move(name), sinks.begin(), sinks.end());
+  } else {
+    auto defaultSink = LogSinkFactory::MakeSink<StdoutColorSink>();
+    if (!loggerPattern.empty()) defaultSink->SetPattern(loggerPattern);
+    mainLogger_ = std::make_shared<Logger>(std::move(name), defaultSink);
+  }
+  // set levels
+  const char* arr[7] = {"trace", "debug", "info", "warn",
+                        "error", "fatal", "off"};
+  for (size_t i = 0; i < 7; ++i) {
+    if (strcasecmp(level.data(), arr[i]) == 0) {
+      mainLogger_->SetLevel(static_cast<LogLevel>(i));
+    }
+    if (strcasecmp(flushLevel.data(), arr[i])) {
+      mainLogger_->SetFlushLevel(static_cast<LogLevel>(i));
+    }
+  }
 }
 
 Base::LogManager& Base::LogManager::Instance() {

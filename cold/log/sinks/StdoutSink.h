@@ -4,18 +4,16 @@
 #include <cstdio>
 #include <memory>
 
-#include "cold/log/LogFormatter.h"
+#include "cold/log/LogFactory.h"
 #include "cold/log/sinks/LogSink.h"
 
 namespace Cold::Base {
 
-class StdoutLogSink : public LogSink {
+class StdoutSink : public LogSink {
  public:
-  constexpr static const char* kDefaultStdoutPattern = "";
-
-  StdoutLogSink() = default;
-  explicit StdoutLogSink(LogFormatterPtr ptr) : LogSink(std::move(ptr)) {}
-  ~StdoutLogSink() override = default;
+  StdoutSink() = default;
+  explicit StdoutSink(LogFormatterPtr ptr) : LogSink(std::move(ptr)) {}
+  ~StdoutSink() override = default;
 
  private:
   void DoSink(const LogMessage& message) override {
@@ -27,6 +25,10 @@ class StdoutLogSink : public LogSink {
 
   void DoFlush() override { fflush(stdout); }
 };
+
+inline std::shared_ptr<Logger> MakeStdoutLogger(std::string loggerName) {
+  return LoggerFactory::MakeLogger<StdoutSink>(std::move(loggerName));
+}
 
 }  // namespace Cold::Base
 

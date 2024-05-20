@@ -1,5 +1,5 @@
-#ifndef COLD_LOG_LOGSINK
-#define COLD_LOG_LOGSINK
+#ifndef LOG_SINKS_LOGSINK
+#define LOG_SINKS_LOGSINK
 
 #include <memory>
 
@@ -11,9 +11,13 @@ namespace Cold::Base {
 
 class LogSink {
  public:
+  static constexpr const char* kDefaultPattern = "%T %L <%N:%t> %c [%b:%l]%n";
+
   using LogFormatterPtr = std::unique_ptr<LogFormatter>;
 
-  explicit LogSink() : formatter_(std::make_unique<LogFormatter>()) {}
+  LogSink(std::string pattern = kDefaultPattern, LogFormatter::FlagMap m = {})
+      : formatter_(
+            std::make_unique<LogFormatter>(std::move(pattern), std::move(m))) {}
 
   explicit LogSink(LogFormatterPtr formatter)
       : formatter_(std::move(formatter)) {}
@@ -55,4 +59,4 @@ using SinkPtr = std::shared_ptr<LogSink>;
 
 };  // namespace Cold::Base
 
-#endif /* COLD_LOG_LOGSINK */
+#endif /* LOG_SINKS_LOGSINK */
