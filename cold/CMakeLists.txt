@@ -14,4 +14,5 @@ set(
     time/TimerQueue.cpp
 )
 
-add_library(cold ${SOURCE})
+add_library(cold SHARED ${SOURCE})
+target_link_libraries(cold PUBLIC llhttp)

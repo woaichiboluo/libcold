@@ -5,30 +5,32 @@ project(libcold)
 
 set(CMAKE_EXPORT_COMPILER_COMMANDS ON)
 
-add_compile_options(-std=c++20 -g)
-add_compile_options(-Wall -Wextra -Werror)
-add_compile_options(-Wno-unused-parameter -Wno-old-style-cast)
-add_compile_options(-Wconversion -Wshadow -Woverloaded-virtual)
-add_compile_options(-DFMT_HEADER_ONLY)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Wno-old-style-cast")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wconversion -Wshadow -Woverloaded-virtual")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_HEADER_ONLY")
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
     set(BUILD_TEST ON)
     add_compile_options(-fsanitize=address)
     link_libraries(asan)
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL Clang)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wthread-safety")
+    endif()
 else()
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL Clang)
-    add_compile_options(-Wthread-safety)
-endif()
-
-
 message("CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
-message("CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
+message("CMAKE_C_COMPILER: ${CMAKE_CXX_COMPILER_ID}")
+message("CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER_ID}")
+message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
+message("CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
 
 include_directories(${PROJECT_SOURCE_DIR})
 
+add_subdirectory(third_party/llhttp)
 add_subdirectory(cold)
 add_subdirectory(examples)
 
