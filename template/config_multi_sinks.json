@@ -17,6 +17,11 @@
         ]
     },
     "http": {
-        "timeoutms": 1000
+        "timeoutms": 1000,
+        "max-url-size": 190000,
+        "max-header-field-size": 1024,
+        "max-header-value-size": 10240,
+        "max-headers-count": 100,
+        "max-body-size": 1048576
     }
 }
