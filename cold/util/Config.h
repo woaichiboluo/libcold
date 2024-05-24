@@ -31,14 +31,19 @@ class Config {
       if (p == nullptr) p = "config.json";
       if (!std::filesystem::exists(p)) {
         config.configJson_ = R"({
-            "logs": { 
-                "name": "main-logger", 
-                "level": "info",
-                "flush-level": "error",
-            },
-            "http": {
-                "timeoutms": 1000
-            }
+         "logs": {
+           "name": "main-logger",
+           "level": "info",
+           "flush-level": "error"
+         },
+         "http": {
+           "timeoutms": 1000,
+           "max-url-size": 190000,
+           "max-header-field-size": 1024,
+           "max-header-value-size": 10240,
+           "max-headers-count": 100,
+           "max-body-size": 1048576
+         }
         })"_json;
         config.configFilePath_ = p;
         config.SaveConfig();
