@@ -89,6 +89,12 @@ target_link_libraries(IoTimeoutTest PRIVATE cold)
 set_target_properties(IoTimeoutTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
 
+add_executable(HttpRequestParserTest net/http/HttpRequestParserTest.cpp)
+target_link_libraries(HttpRequestParserTest PRIVATE cold)
+set_target_properties(HttpRequestParserTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/net")
+add_test(NAME HttpRequestParserTest COMMAND HttpRequestParserTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/net)
+
 #util
 add_executable(ConfigTest util/ConfigTest.cpp)
 target_link_libraries(ConfigTest PRIVATE cold)
