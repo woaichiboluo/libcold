@@ -10,6 +10,7 @@ set(
     net/IpAddress.cpp
     net/BasicSocket.cpp
     net/Acceptor.cpp
+    net/http/HttpRequestParser.cpp
     time/Timer.cpp
     time/TimerQueue.cpp
 )
