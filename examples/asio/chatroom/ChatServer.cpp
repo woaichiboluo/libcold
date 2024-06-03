@@ -3,7 +3,6 @@
 #include <set>
 #include <vector>
 
-#include "cold/coro/AsyncEvent.h"
 #include "cold/coro/IoService.h"
 #include "cold/coro/IoServicePool.h"
 #include "cold/net/Acceptor.h"
@@ -22,68 +21,55 @@ class ChatConnection : public std::enable_shared_from_this<ChatConnection> {
   ChatConnection(ChatRoom& room, Net::TcpSocket socket);
 
   void Deliver(const ChatMessage& message) {
-    {
-      Base::LockGuard guard(mutex_);
-      temp_.insert(temp_.end(), message.Data(),
-                   message.Data() + message.Length());
-    }
-    event_.Set();
+    socket_.GetIoService().CoSpawn(AddMessage(shared_from_this(), message));
   }
 
-  void DoChat() {
-    socket_.GetIoService().CoSpawn(DoRead(shared_from_this()));
-    socket_.GetIoService().CoSpawn(DoWrite(shared_from_this()));
-  }
+  void DoChat() { socket_.GetIoService().CoSpawn(DoRead(shared_from_this())); }
 
  private:
   [[nodiscard]] Base::Task<> DoRead(ConnectionPtr self);
-  [[nodiscard]] Base::Task<> DoWrite(ConnectionPtr self);
+  [[nodiscard]] Base::Task<> DoWrite();
+  [[nodiscard]] Base::Task<> AddMessage(ConnectionPtr self,
+                                        ChatMessage message);
 
   ChatRoom& room_;
-  Base::Mutex mutex_;
-  Base::AsyncEvent event_;
   std::vector<char> temp_;
   std::vector<char> buffer_;
   Net::TcpSocket socket_;
+  bool isWriting_ = false;
 };
 
 class ChatRoom {
  public:
-  ChatRoom(Base::IoService& service) : service_(service) {}
+  ChatRoom() = default;
   ~ChatRoom() = default;
 
   void Join(ConnectionPtr ptr) {
-    service_.CoSpawn([](auto* self, auto conn) -> Base::Task<> {
-      self->connections_.insert(conn);
-      for (const auto& message : self->hisotryMessages_) {
-        conn->Deliver(message);
-      }
-      co_return;
-    }(this, std::move(ptr)));
+    Base::LockGuard guard(mutex_);
+    connections_.insert(ptr);
+    for (const auto& message : hisotryMessages_) {
+      ptr->Deliver(message);
+    }
   }
 
   void Deliver(const ChatMessage& message) {
-    service_.CoSpawn([](auto* self, auto msg) -> Base::Task<> {
-      self->hisotryMessages_.push_back(msg);
-      if (self->hisotryMessages_.size() > kMaxHistoryMessagesSize)
-        self->hisotryMessages_.pop_front();
-      for (auto& conn : self->connections_) {
-        conn->Deliver(msg);
-      }
-      co_return;
-    }(this, message));
+    Base::LockGuard guard(mutex_);
+    hisotryMessages_.push_back(message);
+    if (hisotryMessages_.size() > kMaxHistoryMessagesSize)
+      hisotryMessages_.pop_front();
+    for (auto& conn : connections_) {
+      conn->Deliver(message);
+    }
   }
 
   void Leave(ConnectionPtr ptr) {
-    service_.CoSpawn([](auto* self, auto conn) -> Base::Task<> {
-      self->connections_.erase(conn);
-      co_return;
-    }(this, std::move(ptr)));
+    Base::LockGuard guard(mutex_);
+    connections_.erase(ptr);
   }
 
  private:
   static constexpr size_t kMaxHistoryMessagesSize = 100;
-  Base::IoService& service_;
+  Base::Mutex mutex_;
   std::deque<ChatMessage> hisotryMessages_;
   std::set<ConnectionPtr> connections_;
 };
@@ -108,6 +94,8 @@ Base::Task<> ChatConnection::DoRead(ConnectionPtr self) {
       continue;
     }
     ret = co_await socket_.ReadN(message.Body(), message.BodyLength());
+    Base::INFO("Received: {}",
+               std::string_view{message.Body(), message.BodyLength()});
     if (ret <= 0) {
       socket_.Close();
       break;
@@ -115,31 +103,33 @@ Base::Task<> ChatConnection::DoRead(ConnectionPtr self) {
     room_.Deliver(message);
   }
   room_.Leave(self);
-  event_.Set();
 }
 
-Base::Task<> ChatConnection::DoWrite(ConnectionPtr self) {
-  while (socket_.IsConnected()) {
-    {
-      Base::LockGuard guard(mutex_);
-      buffer_.swap(temp_);
-    }
+[[nodiscard]] Base::Task<> ChatConnection::AddMessage(ConnectionPtr self,
+                                                      ChatMessage message) {
+  temp_.insert(temp_.end(), message.Data(), message.Data() + message.Length());
+  if (!isWriting_) co_await DoWrite();
+}
+
+Base::Task<> ChatConnection::DoWrite() {
+  if (!socket_.IsConnected()) co_return;
+  isWriting_ = true;
+  while (!temp_.empty()) {
+    buffer_.swap(temp_);
     auto ret = co_await socket_.WriteN(buffer_.data(), buffer_.size());
     if (ret < 0) {
       socket_.Close();
       co_return;
     }
     buffer_.clear();
-    co_await event_;
   }
+  isWriting_ = false;
 }
 
 class ChatServer {
  public:
   ChatServer(size_t poolSize, const Net::IpAddress& addr)
-      : pool_(poolSize),
-        acceptor_(pool_.GetMainIoService(), addr, true),
-        room_(pool_.GetMainIoService()) {}
+      : pool_(poolSize), acceptor_(pool_.GetMainIoService(), addr, true) {}
   ~ChatServer() = default;
 
   void Start() {
