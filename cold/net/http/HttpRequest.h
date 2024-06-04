@@ -52,12 +52,25 @@ class HttpRequest {
 
   std::string_view GetBody() const { return body_; }
 
+  void DecodeUrlAndBody();
+
+  void EncodeUrlAndBody();
+
+  void SetAttribute(std::string key, std::string value);
+  void RemoveAttribute(std::string key);
+  std::string_view GetAttribute(std::string key);
+
  private:
   std::string method_;
   std::string url_;
   std::string version_;
   std::map<std::string, std::string> headers_;
   std::string body_;
+
+  std::string query_;
+  std::string fragment_;
+  std::map<std::string, std::string> attributes_;
+  std::map<std::string, std::string> parameters_;
 };
 
 }  // namespace Cold::Net
