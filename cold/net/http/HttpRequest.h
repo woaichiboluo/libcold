@@ -9,6 +9,8 @@
 
 namespace Cold::Net::Http {
 
+class ServletContext;
+
 class HttpRequest {
  public:
   HttpRequest() = default;
@@ -52,7 +54,7 @@ class HttpRequest {
   }
 
   std::string_view GetParameter(const std::string& key) const {
-    return FindValue(attributes_, key);
+    return FindValue(parameters_, key);
   }
 
   const std::map<std::string, std::string>& GetParameters() const {
@@ -78,15 +80,50 @@ class HttpRequest {
     return attributes_;
   }
 
-  // for parse
-  std::string ToRawRequest() const;
+  // for cookies
+  void SetCookie(std::string key, std::string value) {
+    cookies_[std::move(key)] = std::move(value);
+  }
+
+  void RemoveCookie(const std::string& key) { cookies_.erase(key); }
+
+  bool HasCookie(const std::string& key) const {
+    return cookies_.contains(key);
+  }
+
+  std::string_view GetCookie(const std::string& key) const {
+    return FindValue(cookies_, key);
+  }
+
+  const std::map<std::string, std::string>& GetCookies() const {
+    return cookies_;
+  }
 
   void DecodeUrlAndBody();
 
+  /**
+    Decode过后Encode不一定能还原
+    因为表单数据有可能保存到了parameters中去了
+    body的参数有可能会通过query来表现
+  */
   void EncodeUrlAndBody();
 
+  bool IsKeepAlive() const {
+    auto it = headers_.find("Connection");
+    if (it == headers_.end()) return version_ == "HTTP/1.1";
+    return it->second == "keep-alive";
+  }
+
+  void SetServletContext(ServletContext* context) { context_ = context; }
+
+  ServletContext* GetServletContext() const { return context_; }
+
+  // for debug
+  std::string ToRawRequest() const;
+
  private:
-  void ParseKV(std::string_view kvStr);
+  void ParseKV(std::string_view kvStr, std::map<std::string, std::string>& m,
+               char kDelim, char kvDelim);
 
   static std::string_view FindValue(const std::map<std::string, std::string>& m,
                                     const std::string& key) {
@@ -105,6 +142,9 @@ class HttpRequest {
   std::string fragment_;
   std::map<std::string, std::string> attributes_;
   std::map<std::string, std::string> parameters_;
+  std::map<std::string, std::string> cookies_;
+
+  ServletContext* context_;
 };
 
 }  // namespace Cold::Net::Http

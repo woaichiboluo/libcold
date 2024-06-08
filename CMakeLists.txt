@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.0)
 
 project(libcold)
 
-
 set(CMAKE_EXPORT_COMPILER_COMMANDS ON)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -g")
@@ -15,6 +14,7 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
     set(BUILD_TEST ON)
     add_compile_options(-fsanitize=address)
     link_libraries(asan)
+
     if("${CMAKE_CXX_COMPILER_ID}" STREQUAL Clang)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wthread-safety")
     endif()
@@ -35,7 +35,7 @@ add_subdirectory(cold)
 add_subdirectory(examples)
 
 if(${BUILD_TEST})
-    add_subdirectory(test)
     enable_testing()
+    add_subdirectory(test)
     message("BUILD_TEST: ON")
 endif()

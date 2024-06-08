@@ -12,6 +12,7 @@ set(
     net/Acceptor.cpp
     net/http/HttpRequestParser.cpp
     net/http/HttpRequest.cpp
+    net/http/HttpServer.cpp
     time/Timer.cpp
     time/TimerQueue.cpp
 )
