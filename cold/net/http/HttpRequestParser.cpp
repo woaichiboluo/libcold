@@ -7,7 +7,7 @@
 
 using namespace Cold;
 
-Net::HttpRequestParser::HttpRequestParser() {
+Net::Http::HttpRequestParser::HttpRequestParser() {
   llhttp_settings_init(&settings_);
   llhttp_init(&parser_, HTTP_REQUEST, &settings_);
   parser_.data = this;
@@ -32,15 +32,15 @@ Net::HttpRequestParser::HttpRequestParser() {
   settings_.on_message_complete = &HttpRequestParser::OnMessageComplete;
 }
 
-int Net::HttpRequestParser::OnMethod(llhttp_t* parser) {
+int Net::Http::HttpRequestParser::OnMethod(llhttp_t* parser) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   self->curRequest_.SetMethod(
       llhttp_method_name(static_cast<llhttp_method>(parser->method)));
   return 0;
 }
 
-int Net::HttpRequestParser::OnUrl(llhttp_t* parser, const char* at,
-                                  size_t length) {
+int Net::Http::HttpRequestParser::OnUrl(llhttp_t* parser, const char* at,
+                                        size_t length) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   if (self->buf_.size() + length > GetMaxUrlSize()) {
     llhttp_set_error_reason(parser, "Url size is too large");
@@ -50,20 +50,20 @@ int Net::HttpRequestParser::OnUrl(llhttp_t* parser, const char* at,
   return 0;
 }
 
-int Net::HttpRequestParser::OnUrlComplete(llhttp_t* parser) {
+int Net::Http::HttpRequestParser::OnUrlComplete(llhttp_t* parser) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   self->curRequest_.SetUrl(std::move(self->buf_));
   return 0;
 }
 
-int Net::HttpRequestParser::OnVersion(llhttp_t* parser, const char* at,
-                                      size_t length) {
+int Net::Http::HttpRequestParser::OnVersion(llhttp_t* parser, const char* at,
+                                            size_t length) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   self->buf_.append(at, length);
   return 0;
 }
 
-int Net::HttpRequestParser::OnVersionComplete(llhttp_t* parser) {
+int Net::Http::HttpRequestParser::OnVersionComplete(llhttp_t* parser) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   std::string v = "HTTP/";
   v += self->buf_;
@@ -72,8 +72,8 @@ int Net::HttpRequestParser::OnVersionComplete(llhttp_t* parser) {
   return 0;
 }
 
-int Net::HttpRequestParser::OnHeaderField(llhttp_t* parser, const char* at,
-                                          size_t length) {
+int Net::Http::HttpRequestParser::OnHeaderField(llhttp_t* parser,
+                                                const char* at, size_t length) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   if (self->curRequest_.GetHeaders().size() + 1 > GetMaxHeaderCount()) {
     llhttp_set_error_reason(parser, "Headers is too large");
@@ -87,12 +87,12 @@ int Net::HttpRequestParser::OnHeaderField(llhttp_t* parser, const char* at,
   return 0;
 }
 
-int Net::HttpRequestParser::OnHeaderFieldComplete(llhttp_t* parser) {
+int Net::Http::HttpRequestParser::OnHeaderFieldComplete(llhttp_t* parser) {
   return 0;
 }
 
-int Net::HttpRequestParser::OnHeaderValue(llhttp_t* parser, const char* at,
-                                          size_t length) {
+int Net::Http::HttpRequestParser::OnHeaderValue(llhttp_t* parser,
+                                                const char* at, size_t length) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   if (self->bufForHeaderValue_.size() + length > GetMaxHeaderValueSize()) {
     llhttp_set_error_reason(parser, "Header value size is too large");
@@ -102,15 +102,15 @@ int Net::HttpRequestParser::OnHeaderValue(llhttp_t* parser, const char* at,
   return 0;
 }
 
-int Net::HttpRequestParser::OnHeaderValueComplete(llhttp_t* parser) {
+int Net::Http::HttpRequestParser::OnHeaderValueComplete(llhttp_t* parser) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   self->curRequest_.SetHeader(std::move(self->buf_),
                               std::move(self->bufForHeaderValue_));
   return 0;
 }
 
-int Net::HttpRequestParser::OnBody(llhttp_t* parser, const char* at,
-                                   size_t length) {
+int Net::Http::HttpRequestParser::OnBody(llhttp_t* parser, const char* at,
+                                         size_t length) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   if (self->checkContentLength_) {
     size_t contentLength = 0;
@@ -130,7 +130,7 @@ int Net::HttpRequestParser::OnBody(llhttp_t* parser, const char* at,
   return 0;
 }
 
-int Net::HttpRequestParser::OnMessageComplete(llhttp_t* parser) {
+int Net::Http::HttpRequestParser::OnMessageComplete(llhttp_t* parser) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   self->curRequest_.SetBody(std::move(self->buf_));
   self->requestQueue_.push(std::move(self->curRequest_));
@@ -139,12 +139,12 @@ int Net::HttpRequestParser::OnMessageComplete(llhttp_t* parser) {
   return 0;
 }
 
-bool Net::HttpRequestParser::Parse(const char* data, size_t len) {
+bool Net::Http::HttpRequestParser::Parse(const char* data, size_t len) {
   auto errcode = llhttp_execute(&parser_, data, len);
   return errcode == HPE_OK;
 }
 
-Net::HttpRequest Net::HttpRequestParser::TakeRequest() {
+Net::Http::HttpRequest Net::Http::HttpRequestParser::TakeRequest() {
   assert(!requestQueue_.empty());
   auto req = std::move(requestQueue_.front());
   requestQueue_.pop();

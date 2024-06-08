@@ -7,9 +7,7 @@
 #include <string>
 #include <string_view>
 
-#include "cold/log/Logger.h"
-
-namespace Cold::Net {
+namespace Cold::Net::Http {
 
 class HttpRequest {
  public:
@@ -20,47 +18,83 @@ class HttpRequest {
     std::transform(method.begin(), method.end(), method.begin(), toupper);
     method_ = std::move(method);
   }
-
   void SetUrl(std::string url) { url_ = url; }
   void SetVersion(std::string version) { version_ = std::move(version); }
-  void SetHeader(std::string key, std::string value) {
-    headers_.emplace(std::move(key), std::move(value));
-  }
   void SetBody(std::string body) { body_ = std::move(body); }
-  std::string ToRawRequest() const;
 
   std::string_view GetMethod() const { return method_; }
   std::string_view GetUrl() const { return url_; }
   std::string_view GetVersion() const { return version_; }
+  std::string_view GetBody() const { return body_; }
+
+  // for headers
+  void SetHeader(std::string key, std::string value) {
+    headers_[std::move(key)] = std::move(value);
+  }
+
+  void RemoveHeader(const std::string& key) { headers_.erase(key); }
+
+  bool HasHeader(const std::string& key) const {
+    return headers_.contains(key);
+  }
+
+  std::string_view GetHeader(const std::string& key) const {
+    return FindValue(headers_, key);
+  }
 
   const std::map<std::string, std::string>& GetHeaders() const {
     return headers_;
   }
 
-  bool HasHeader(const std::string& key) const {
-    return headers_.find(key) != headers_.end();
+  // for parameters
+  bool HasParameter(const std::string& key) const {
+    return parameters_.contains(key);
   }
 
-  std::string_view GetHeader(const std::string& key) const {
-    auto it = headers_.find(key);
-    if (it == headers_.end()) {
-      Base::INFO("not found key");
-      return "";
-    }
-    return it->second;
+  std::string_view GetParameter(const std::string& key) const {
+    return FindValue(attributes_, key);
   }
 
-  std::string_view GetBody() const { return body_; }
+  const std::map<std::string, std::string>& GetParameters() const {
+    return parameters_;
+  }
+
+  // for attributes
+  void SetAttribute(std::string key, std::string value) {
+    attributes_[std::move(key)] = std::move(value);
+  }
+
+  void RemoveAttribute(const std::string& key) { attributes_.erase(key); }
+
+  bool HasAttribute(const std::string& key) const {
+    return attributes_.contains(key);
+  }
+
+  std::string_view GetAttribute(const std::string& key) const {
+    return FindValue(attributes_, key);
+  }
+
+  const std::map<std::string, std::string>& GetAttributes() const {
+    return attributes_;
+  }
+
+  // for parse
+  std::string ToRawRequest() const;
 
   void DecodeUrlAndBody();
 
   void EncodeUrlAndBody();
 
-  void SetAttribute(std::string key, std::string value);
-  void RemoveAttribute(std::string key);
-  std::string_view GetAttribute(std::string key);
-
  private:
+  void ParseKV(std::string_view kvStr);
+
+  static std::string_view FindValue(const std::map<std::string, std::string>& m,
+                                    const std::string& key) {
+    auto it = m.find(key);
+    if (it == m.end()) return "";
+    return it->second;
+  }
+
   std::string method_;
   std::string url_;
   std::string version_;
@@ -73,6 +107,6 @@ class HttpRequest {
   std::map<std::string, std::string> parameters_;
 };
 
-}  // namespace Cold::Net
+}  // namespace Cold::Net::Http
 
 #endif /* NET_HTTP_HTTPREQUEST */

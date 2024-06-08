@@ -8,7 +8,7 @@
 #include "cold/util/Config.h"
 #include "third_party/llhttp/llhttp.h"
 
-namespace Cold::Net {
+namespace Cold::Net::Http {
 
 class HttpRequestParser {
  public:
@@ -85,6 +85,6 @@ class HttpRequestParser {
   std::queue<HttpRequest> requestQueue_;
 };
 
-}  // namespace Cold::Net
+}  // namespace Cold::Net::Http
 
 #endif /* NET_HTTP_HTTPREQUESTPARSER */

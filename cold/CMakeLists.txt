@@ -11,6 +11,7 @@ set(
     net/BasicSocket.cpp
     net/Acceptor.cpp
     net/http/HttpRequestParser.cpp
+    net/http/HttpRequest.cpp
     time/Timer.cpp
     time/TimerQueue.cpp
 )

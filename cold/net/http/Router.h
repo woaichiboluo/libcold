@@ -6,20 +6,20 @@
 #include <memory>
 #include <string>
 
+#include "cold/net/http/Servlet.h"
 #include "cold/util/StringUtils.h"
 
-namespace Cold::Net {
+namespace Cold::Net::Http {
 
 class Filter {};
-class Servlet {};
 
 class Router {
  public:
   using FilterPtr = std::shared_ptr<Filter>;
-  using ServletPtr = std::shared_ptr<Servlet>;
+  using ServletPtr = std::shared_ptr<HttpServlet>;
 
   Router()
-      : servletRouterRoot_(std::make_unique<TrieNode<Servlet>>()),
+      : servletRouterRoot_(std::make_unique<TrieNode<HttpServlet>>()),
         filterRouterRoot_(std::make_unique<TrieNode<Filter>>()) {}
 
   ~Router() = default;
@@ -90,13 +90,13 @@ class Router {
     std::shared_ptr<T> param_;
   };
 
-  using ServletRouterRoot = std::unique_ptr<TrieNode<Servlet>>;
+  using ServletRouterRoot = std::unique_ptr<TrieNode<HttpServlet>>;
   using FilterRouterRoot = std::unique_ptr<TrieNode<Filter>>;
 
   ServletRouterRoot servletRouterRoot_;
   FilterRouterRoot filterRouterRoot_;
 };
 
-}  // namespace Cold::Net
+}  // namespace Cold::Net::Http
 
 #endif /* NET_HTTP_ROUTER */

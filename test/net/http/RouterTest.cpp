@@ -6,15 +6,15 @@
 using namespace Cold;
 
 TEST_CASE("basic") {
-  Net::Router router;
-  auto f1 = std::make_shared<Net::Filter>();
+  Net::Http::Router router;
+  auto f1 = std::make_shared<Net::Http::Filter>();
   router.AddRoute("/hello/world", f1);
   auto p = router.MatchFilter("/hello/world");
   CHECK(p);
   CHECK(p.get() == f1.get());
   auto p1 = router.MatchFilter("/hello/world1");
   CHECK(!p1);
-  auto f2 = std::make_shared<Net::Filter>();
+  auto f2 = std::make_shared<Net::Http::Filter>();
   router.AddRoute("/hello/**", f2);
   auto p2 = router.MatchFilter("/hello/world");
   CHECK(p2);

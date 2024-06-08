@@ -6,7 +6,7 @@
 
 TEST_CASE("basic") {
   const char* r1 = "GET / HTTP/1.1\r\n\r\n";
-  Cold::Net::HttpRequestParser parser;
+  Cold::Net::Http::HttpRequestParser parser;
   CHECK(parser.Parse(r1, strlen(r1)));
   CHECK(parser.HasRequest());
   auto request1 = parser.TakeRequest();
@@ -47,7 +47,7 @@ TEST_CASE("basic") {
 }
 
 TEST_CASE("Post with body") {
-  Cold::Net::HttpRequestParser parser;
+  Cold::Net::Http::HttpRequestParser parser;
   const char* r =
       "POST /addr HTTP/1.0\r\nConnection: close\r\nContent-Length: 35"
       "\r\n\r\nkey1=value1&";
@@ -84,7 +84,7 @@ TEST_CASE("parse in multiple pieces") {
     const char* r6 = "key1=value1&key2=value2";
     const char* r7 = " HT";
     const char* r8 = "TP/1.1\r\n\r\n";
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     CHECK(parser.Parse(r1, strlen(r1)));
     CHECK(parser.Parse(r2, strlen(r2)));
     CHECK(parser.Parse(r3, strlen(r3)));
@@ -119,7 +119,7 @@ TEST_CASE("parse in multiple pieces") {
       "/addr HTTP/1.0\r\nConnection: "
       "keep-alive\r\nContent-Length: "
       "35\r\n\r\nkey1=value1&key2=value2&key3=value3";
-  Cold::Net::HttpRequestParser parser;
+  Cold::Net::Http::HttpRequestParser parser;
   CHECK(parser.Parse(r1, strlen(r1)));
   CHECK(parser.HasRequest() == true);
   CHECK(parser.RequestQueueSize() == 1);
@@ -202,31 +202,31 @@ TEST_CASE("parse in multiple pieces") {
 TEST_CASE("bad request") {
   const char* r1 = "OPTIONSx";
   {
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     CHECK(!parser.Parse(r1, strlen(r1)));
   }
   {
     const char* r2 =
         "POST / HTTP/1.0\r\nConnection: close\r\nContent-Length: "
         "xxx\r\n\r\nxx ";
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     CHECK(!parser.Parse(r2, strlen(r2)));
   }
   {
     const char* r3 = "XXX / HTTP/1.0\r\n\r\n";
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     CHECK(!parser.Parse(r3, strlen(r3)));
   }
 
   {
     const char* r4 = "XXX / HTTP/1.0\r\n\r\n";
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     CHECK(!parser.Parse(r4, strlen(r4)));
   }
 
   {
     const char* r5 = "GET / HTTP/3.3\r\n\r\n";
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     CHECK(!parser.Parse(r5, strlen(r5)));
   }
 }
@@ -248,14 +248,14 @@ TEST_CASE("test request too large") {
           "/http/max-headers-count", 100ull);  // 30M
   {
     std::string url(maxUrlSize, 'a');
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     auto req = fmt::format("GET /{} HTTP/1.1", url);
     CHECK(!parser.Parse(req.data(), req.size()));
     CHECK(std::string_view(parser.GetBadReason()) == "Url size is too large");
   }
   {
     std::string field(maxHeaderFieldSize + 1, 'a');
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     auto req = fmt::format("GET / HTTP/1.1\r\n{}: 1\r\n\r\n", field);
     CHECK(!parser.Parse(req.data(), req.size()));
     CHECK(std::string_view(parser.GetBadReason()) ==
@@ -263,7 +263,7 @@ TEST_CASE("test request too large") {
   }
   {
     std::string value(maxHeaderValueSize + 1, 'a');
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     auto req = fmt::format("GET / HTTP/1.1\r\nfield: {}\r\n\r\n", value);
     CHECK(!parser.Parse(req.data(), req.size()));
     CHECK(std::string_view(parser.GetBadReason()) ==
@@ -271,7 +271,7 @@ TEST_CASE("test request too large") {
   }
   {
     std::string body(maxBodySize + 1, 'a');
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     auto req = fmt::format("GET / HTTP/1.1\r\nContent-Length: {}\r\n\r\n{}",
                            body.size(), body);
     CHECK(!parser.Parse(req.data(), req.size()));
@@ -285,9 +285,36 @@ TEST_CASE("test request too large") {
       headers += std::to_string(i);
       headers += "\r\n";
     }
-    Cold::Net::HttpRequestParser parser;
+    Cold::Net::Http::HttpRequestParser parser;
     auto req = fmt::format("GET / HTTP/1.1\r\n{}\r\n", headers);
     CHECK(!parser.Parse(req.data(), req.size()));
     CHECK(std::string_view(parser.GetBadReason()) == "Headers is too large");
   }
+}
+
+TEST_CASE("with decode param") {
+  const char* req =
+      "GET "
+      "/index.html%3f%e5%8f%82%e6%95%b0%e4%b8%80%3d%e5%80%bc+%e4%b8%80%26%e5%"
+      "8f%82%e6%95%b0%e4%ba%8c%3d%e5%80%bc%e4%ba%8c%26%e5%8f%82%e6%95%b0%e4%b8%"
+      "89%3d%e5%80%bc%e4%b8%89%26key4%3dvalue4 HTTP/1.0\r\n\r\n";
+  // const char* s = "?参数一=值 一&参数二=值二&参数三=值三&key4=value4";
+  Cold::Net::Http::HttpRequestParser parser;
+  CHECK(parser.Parse(req, strlen(req)));
+  CHECK(parser.HasRequest());
+  auto request = parser.TakeRequest();
+  CHECK(request.GetUrl() ==
+        "/index.html%3f%e5%8f%82%e6%95%b0%e4%b8%80%3d%e5%80%bc+%e4%b8%80%26%e5%"
+        "8f%82%e6%95%b0%e4%ba%8c%3d%e5%80%bc%e4%ba%8c%26%e5%8f%82%e6%95%b0%e4%"
+        "b8%89%3d%e5%80%bc%e4%b8%89%26key4%3dvalue4");
+  request.DecodeUrlAndBody();
+  CHECK(request.GetUrl() == "/index.html");
+  CHECK(request.HasParameter("参数一"));
+  CHECK(request.GetParameter("参数一") == "值 一");
+  CHECK(request.HasParameter("参数二"));
+  CHECK(request.GetParameter("参数二") == "值二");
+  CHECK(request.HasParameter("参数三"));
+  CHECK(request.GetParameter("参数三") == "值三");
+  CHECK(request.HasParameter("key4"));
+  CHECK(request.GetParameter("key4") == "value4");
 }
