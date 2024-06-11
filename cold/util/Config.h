@@ -37,7 +37,8 @@ class Config {
            "flush-level": "error"
          },
          "http": {
-           "timeoutms": 1000,
+           "read-timeout-ms": 15000,
+           "write-timeout-ms": 15000,
            "max-url-size": 190000,
            "max-header-field-size": 1024,
            "max-header-value-size": 10240,
