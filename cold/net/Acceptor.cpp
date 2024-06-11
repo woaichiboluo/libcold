@@ -56,13 +56,14 @@ Base::Task<Net::TcpSocket> Net::Acceptor::Accept(Base::IoService& service) {
   assert(listened_);
   auto [sockfd, addr] = co_await AcceptAwaitable(ioService_, fd_);
   if (sockfd < 0) {
-    Base::ERROR("Accept Error. errno: {}, reason: {}", errno,
-                Base::ThisThread::ErrorMsg());
     if (errno == EMFILE) {
       close(idleFd_);
       idleFd_ = accept(fd_, nullptr, nullptr);
       close(idleFd_);
       idleFd_ = open("/dev/null", O_RDONLY | O_CLOEXEC);
+    } else {
+      Base::ERROR("Accept Error. errno: {}, reason: {}", errno,
+                  Base::ThisThread::ErrorMsg());
     }
   }
   co_return Net::TcpSocket(service, localAddress_, addr, sockfd);
