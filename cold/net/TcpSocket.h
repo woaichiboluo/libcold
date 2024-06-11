@@ -60,6 +60,21 @@ class TcpSocket : public Net::BasicSocket {
     }
     co_return static_cast<ssize_t>(n);
   }
+
+  template <typename REP, typename PERIOD>
+  [[nodiscard]] Base::Task<ssize_t> WriteNWithTimeout(
+      const char* buf, size_t n, std::chrono::duration<REP, PERIOD> duration) {
+    ioService_->CoSpawn(
+        [](TcpSocket* socket) -> Base::Task<> { co_return; }(this));
+    size_t byteAlreadyWrite = 0;
+    while (byteAlreadyWrite < n) {
+      auto ret = co_await WriteWithTimeout(buf + byteAlreadyWrite,
+                                           n - byteAlreadyWrite, duration);
+      if (ret < 0) co_return ret;
+      byteAlreadyWrite += static_cast<size_t>(ret);
+    }
+    co_return static_cast<ssize_t>(n);
+  }
 };
 
 }  // namespace Cold::Net
