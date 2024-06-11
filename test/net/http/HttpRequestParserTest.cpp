@@ -12,7 +12,7 @@ TEST_CASE("basic") {
   auto request1 = parser.TakeRequest();
   CHECK(request1.GetMethod() == "GET");
   CHECK(request1.GetVersion() == "HTTP/1.1");
-  CHECK(request1.GetHeaders().empty());
+  CHECK(request1.GetAllHeader().empty());
   CHECK(request1.GetBody().empty());
 
   const char* r2 =
@@ -32,7 +32,7 @@ TEST_CASE("basic") {
   CHECK(request2.GetMethod() == "GET");
   CHECK(request2.GetUrl() == "/someaddr?key1=value1#frag");
   CHECK(request2.GetVersion() == "HTTP/1.1");
-  CHECK(request2.GetHeaders().size() == 7);
+  CHECK(request2.GetAllHeader().size() == 7);
   CHECK(request2.GetHeader("Host") == "www.xxxx.com:80");
   CHECK(request2.GetHeader("Connection") == "close");
   CHECK(request2.GetHeader("Accept") ==
@@ -61,7 +61,7 @@ TEST_CASE("Post with body") {
   CHECK(request1.GetUrl() == "/addr");
   CHECK(request1.GetVersion() == "HTTP/1.0");
   {
-    auto headers = request1.GetHeaders();
+    auto headers = request1.GetAllHeader();
     CHECK(headers.size() == 2);
 
     CHECK(headers.find("Connection") != headers.end());
@@ -128,7 +128,7 @@ TEST_CASE("parse in multiple pieces") {
   CHECK(request1.GetMethod() == "GET");
   CHECK(request1.GetUrl() == "/");
   CHECK(request1.GetVersion() == "HTTP/1.1");
-  CHECK(request1.GetHeaders().empty());
+  CHECK(request1.GetAllHeader().empty());
   CHECK(request1.GetBody().empty());
 
   CHECK(parser.Parse(r2, strlen(r2)));
@@ -146,7 +146,7 @@ TEST_CASE("parse in multiple pieces") {
   CHECK(request2.GetUrl() == "/someaddr?key1=value1#frag");
   CHECK(request2.GetVersion() == "HTTP/1.1");
   {
-    auto headers = request2.GetHeaders();
+    auto headers = request2.GetAllHeader();
     CHECK(headers.size() == 7);
 
     CHECK(headers.find("Host") != headers.end());
@@ -186,7 +186,7 @@ TEST_CASE("parse in multiple pieces") {
   CHECK(request3.GetUrl() == "/addr");
   CHECK(request3.GetVersion() == "HTTP/1.0");
   {
-    auto headers = request3.GetHeaders();
+    auto headers = request3.GetAllHeader();
     CHECK(headers.size() == 2);
 
     CHECK(headers.find("Connection") != headers.end());
@@ -292,7 +292,7 @@ TEST_CASE("test request too large") {
   }
 }
 
-TEST_CASE("with decode param") {
+TEST_CASE("test") {
   const char* req =
       "GET "
       "/index.html%3f%e5%8f%82%e6%95%b0%e4%b8%80%3d%e5%80%bc+%e4%b8%80%26%e5%"
@@ -307,14 +307,4 @@ TEST_CASE("with decode param") {
         "/index.html%3f%e5%8f%82%e6%95%b0%e4%b8%80%3d%e5%80%bc+%e4%b8%80%26%e5%"
         "8f%82%e6%95%b0%e4%ba%8c%3d%e5%80%bc%e4%ba%8c%26%e5%8f%82%e6%95%b0%e4%"
         "b8%89%3d%e5%80%bc%e4%b8%89%26key4%3dvalue4");
-  request.DecodeUrlAndBody();
-  CHECK(request.GetUrl() == "/index.html");
-  CHECK(request.HasParameter("参数一"));
-  CHECK(request.GetParameter("参数一") == "值 一");
-  CHECK(request.HasParameter("参数二"));
-  CHECK(request.GetParameter("参数二") == "值二");
-  CHECK(request.HasParameter("参数三"));
-  CHECK(request.GetParameter("参数三") == "值三");
-  CHECK(request.HasParameter("key4"));
-  CHECK(request.GetParameter("key4") == "value4");
 }

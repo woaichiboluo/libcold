@@ -42,6 +42,7 @@ class ServletContext {
     Base::LockGuard guard(mutex_);
     attributes_[std::move(key)] = std::move(value);
   }
+
   void RemoveAttribute(const std::string& key) {
     Base::LockGuard guard(mutex_);
     attributes_.erase(key);

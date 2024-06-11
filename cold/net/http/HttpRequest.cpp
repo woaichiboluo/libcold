@@ -1,12 +1,20 @@
 #include "cold/net/http/HttpRequest.h"
 
 #include "cold/net/http/HttpCommon.h"
-#include "third_party/fmt/include/fmt/core.h"
 
 using namespace Cold;
 
+Net::Http::HttpRequest::HttpRequest(RawHttpRequest request,
+                                    HttpResponse* response,
+                                    ServletContext* context)
+    : rawRequest_(std::move(request)), response_(response), context_(context) {
+  assert(response_);
+  assert(context_);
+  DecodeUrlAndBody();
+}
+
 void Net::Http::HttpRequest::DecodeUrlAndBody() {
-  url_ = UrlDecode(url_);
+  url_ = UrlDecode(rawRequest_.GetUrl());
   std::string_view view(url_);
   auto pos = view.find_last_of('#');
   if (pos != std::string_view::npos) {
@@ -24,29 +32,29 @@ void Net::Http::HttpRequest::DecodeUrlAndBody() {
     ParseKV(cookiesView, cookies_, '=', ';');
   }
   // defualt Content-Type:application/x-www-form-urlencoded
-  body_ = UrlDecode(body_);
+  body_ = UrlDecode(rawRequest_.GetBody());
   ParseKV(body_, parameters_, '=', '&');
 }
 
-void Net::Http::HttpRequest::EncodeUrlAndBody() {
-  if (!parameters_.empty()) {
-    url_.push_back('?');
-    for (auto begin = parameters_.begin(); begin != parameters_.end();
-         ++begin) {
-      url_.append(begin->first);
-      url_.push_back('=');
-      url_.append(begin->second);
-      if (begin->first != parameters_.rbegin()->first) url_.push_back('&');
-    }
-  }
-  if (!fragment_.empty()) {
-    url_.push_back('#');
-    url_.append(fragment_);
-  }
-  url_ = UrlEncode(url_);
-  // defualt Content-Type:application/x-www-form-urlencoded
-  body_ = UrlEncode(body_);
-}
+// void Net::Http::HttpRequest::EncodeUrlAndBody() {
+//   if (!parameters_.empty()) {
+//     url_.push_back('?');
+//     for (auto begin = parameters_.begin(); begin != parameters_.end();
+//          ++begin) {
+//       url_.append(begin->first);
+//       url_.push_back('=');
+//       url_.append(begin->second);
+//       if (begin->first != parameters_.rbegin()->first) url_.push_back('&');
+//     }
+//   }
+//   if (!fragment_.empty()) {
+//     url_.push_back('#');
+//     url_.append(fragment_);
+//   }
+//   url_ = UrlEncode(url_);
+//   // defualt Content-Type:application/x-www-form-urlencoded
+//   body_ = UrlEncode(body_);
+// }
 
 void Net::Http::HttpRequest::ParseKV(std::string_view kvStr,
                                      std::map<std::string, std::string>& m,
@@ -62,25 +70,4 @@ void Net::Http::HttpRequest::ParseKV(std::string_view kvStr,
     if (valuepos == kvStr.npos) return;
     kvStr = kvStr.substr(valuepos + 1);
   }
-}
-
-std::string Net::Http::HttpRequest::ToRawRequest() const {
-  std::string ret;
-  ret = fmt::format("{} {} {}{}", method_, url_, version_, kCRLF);
-  if (!headers_.contains("Cookies")) {
-    std::string cookies;
-    for (const auto& [key, value] : cookies_) {
-      cookies.append(key);
-      cookies.push_back('=');
-      cookies.append(value);
-      if (key != cookies_.rbegin()->first) cookies.push_back(';');
-    }
-    ret.append(fmt::format("Cookies: {}{}", cookies, kCRLF));
-  }
-  for (const auto& [key, value] : headers_) {
-    ret.append(fmt::format("{}: {}{}", key, value, kCRLF));
-  }
-  ret.append(kCRLF);
-  ret.append(body_);
-  return ret;
 }

@@ -6,6 +6,32 @@
 #include <cstdint>
 #include <string>
 
+#define MAP_CRUD(MethodName, Member)                                     \
+  void Set##MethodName(std::string key, std::string value) {             \
+    Member[std::move(key)] = std::move(value);                           \
+  }                                                                      \
+  bool Has##MethodName(const std::string& key) const {                   \
+    return Member.contains(key);                                         \
+  }                                                                      \
+  std::string_view Get##MethodName(const std::string& key) const {       \
+    auto it = Member.find(key);                                          \
+    if (it == Member.end()) return "";                                   \
+    return it->second;                                                   \
+  }                                                                      \
+  void Remove##MethodName(const std::string& key) { Member.erase(key); } \
+  std::map<std::string, std::string>& GetAll##MethodName() { return Member; }
+
+#define MAP_READ(MethodName, Member)                               \
+  bool Has##MethodName(const std::string& key) const {             \
+    return Member.contains(key);                                   \
+  }                                                                \
+  std::string_view Get##MethodName(const std::string& key) const { \
+    auto it = Member.find(key);                                    \
+    if (it == Member.end()) return "";                             \
+    return it->second;                                             \
+  }                                                                \
+  std::map<std::string, std::string>& GetAll##MethodName() { return Member; }
+
 #define HTTP_STATUS_MAP(XX)                                                   \
   XX(100, CONTINUE, CONTINUE)                                                 \
   XX(101, SWITCHING_PROTOCOLS, SWITCHING_PROTOCOLS)                           \

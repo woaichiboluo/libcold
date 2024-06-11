@@ -4,7 +4,7 @@
 #include <cerrno>
 #include <queue>
 
-#include "cold/net/http/HttpRequest.h"
+#include "cold/net/http/RawHttpRequest.h"
 #include "cold/util/Config.h"
 #include "third_party/llhttp/llhttp.h"
 
@@ -22,7 +22,7 @@ class HttpRequestParser {
 
   bool HasRequest() const { return !requestQueue_.empty(); }
   size_t RequestQueueSize() const { return requestQueue_.size(); }
-  HttpRequest TakeRequest();
+  RawHttpRequest TakeRequest();
   const char* GetBadReason() const {
     if (parser_.reason) return parser_.reason;
     return "No error";
@@ -78,11 +78,11 @@ class HttpRequestParser {
 
   llhttp_t parser_;
   llhttp_settings_t settings_;
-  HttpRequest curRequest_;
+  RawHttpRequest curRequest_;
   bool checkContentLength_ = true;
   std::string buf_;
   std::string bufForHeaderValue_;
-  std::queue<HttpRequest> requestQueue_;
+  std::queue<RawHttpRequest> requestQueue_;
 };
 
 }  // namespace Cold::Net::Http

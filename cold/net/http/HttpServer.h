@@ -11,7 +11,13 @@ namespace Cold::Net::Http {
 class HttpServer {
  public:
   HttpServer(Net::IpAddress& addr, size_t poolSize = 0, bool reusePort = false)
-      : pool_(poolSize), acceptor_(pool_.GetMainIoService(), addr, reusePort) {}
+      : pool_(poolSize), acceptor_(pool_.GetMainIoService(), addr, reusePort) {
+    badRequestBodyCall_ = []() -> std::unique_ptr<HttpResponseBody> {
+      auto body = std::make_unique<TextBody>();
+      body->SetContent("<h1>400 NotFound</h1>");
+      return std::move(body);
+    };
+  }
 
   ~HttpServer() = default;
 
@@ -47,6 +53,12 @@ class HttpServer {
     context_.dispatcher_->AddFilter(url, std::move(filter));
   }
 
+  void SetBadRequestBodyCall(
+      std::function<std::unique_ptr<HttpResponseBody>()> call) {
+    assert(!started_);
+    badRequestBodyCall_ = std::move(call);
+  }
+
   void Start() {
     acceptor_.Listen();
     acceptor_.GetIoService().CoSpawn(DoAccept());
@@ -72,6 +84,7 @@ class HttpServer {
   Net::Acceptor acceptor_;
   ServletContext context_;
   bool started_ = false;
+  std::function<std::unique_ptr<HttpResponseBody>()> badRequestBodyCall_;
 };
 
 }  // namespace Cold::Net::Http

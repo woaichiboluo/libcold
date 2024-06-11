@@ -75,7 +75,7 @@ int Net::Http::HttpRequestParser::OnVersionComplete(llhttp_t* parser) {
 int Net::Http::HttpRequestParser::OnHeaderField(llhttp_t* parser,
                                                 const char* at, size_t length) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
-  if (self->curRequest_.GetHeaders().size() + 1 > GetMaxHeaderCount()) {
+  if (self->curRequest_.GetAllHeader().size() + 1 > GetMaxHeaderCount()) {
     llhttp_set_error_reason(parser, "Headers is too large");
     return HPE_USER;
   }
@@ -134,7 +134,7 @@ int Net::Http::HttpRequestParser::OnMessageComplete(llhttp_t* parser) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   self->curRequest_.SetBody(std::move(self->buf_));
   self->requestQueue_.push(std::move(self->curRequest_));
-  self->curRequest_ = HttpRequest();
+  self->curRequest_ = RawHttpRequest();
   self->checkContentLength_ = true;
   return 0;
 }
@@ -144,7 +144,7 @@ bool Net::Http::HttpRequestParser::Parse(const char* data, size_t len) {
   return errcode == HPE_OK;
 }
 
-Net::Http::HttpRequest Net::Http::HttpRequestParser::TakeRequest() {
+Net::Http::RawHttpRequest Net::Http::HttpRequestParser::TakeRequest() {
   assert(!requestQueue_.empty());
   auto req = std::move(requestQueue_.front());
   requestQueue_.pop();

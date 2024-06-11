@@ -67,24 +67,22 @@ class HttpResponse {
 
   void SetBody(std::unique_ptr<HttpResponseBody> body) {
     body_ = std::move(body);
+    body_->SetRelatedHeaders(headers_);
   }
 
-  void MakeHeaders(std::vector<char>& headersBuf) {
-    if (body_)
-      body_->SetRelatedHeaders(headers_);
-    else
-      headers_["Content-Length"] = "0";
+  void MakeHeaders(std::string& headersBuf) {
+    if (!body_) headers_["Content-Length"] = "0";
+    headers_["Connection"] = close_ ? "close" : "keep-alive";
     auto firstLine =
         fmt::format("{} {} {}{}", version_, static_cast<int>(status_),
                     HttpStatusToHttpStatusMsg(status_), kCRLF);
-    headers_["Connection"] = close_ ? "close" : "keep-alive";
-    headersBuf.insert(headersBuf.end(), firstLine.begin(), firstLine.end());
+    headersBuf.append(firstLine);
     for (const auto& [key, value] : headers_) {
-      headersBuf.insert(headersBuf.end(), key.begin(), key.end());
+      headersBuf.append(key);
       headersBuf.push_back(':');
       headersBuf.push_back(' ');
-      headersBuf.insert(headersBuf.end(), value.begin(), value.end());
-      headersBuf.insert(headersBuf.end(), kCRLF.begin(), kCRLF.end());
+      headersBuf.append(value);
+      headersBuf.append(kCRLF);
     }
     headersBuf.insert(headersBuf.end(), kCRLF.begin(), kCRLF.end());
   }
@@ -102,24 +100,9 @@ class HttpResponse {
   }
 
   // for debug
-  std::string ToRawResponse() const {
-    std::string ret =
-        fmt::format("{} {} {}{}", version_, static_cast<int>(status_),
-                    HttpStatusToHttpStatusMsg(status_), kCRLF);
-    auto h = headers_;
-    if (body_)
-      body_->SetRelatedHeaders(h);
-    else
-      h["Content-Length"] = "0";
-    h["Connection"] = close_ ? "close" : "keep-alive";
-    for (const auto& [key, value] : h) {
-      ret.append(fmt::format("{}: {}{}", key, value, kCRLF));
-    }
-    ret.append(kCRLF);
-    if (body_) {
-      auto b = body_->ToRawBody();
-      ret.append(b.begin(), b.end());
-    }
+  std::string Dump() {
+    std::string ret;
+    MakeHeaders(ret);
     return ret;
   }
 
@@ -128,7 +111,7 @@ class HttpResponse {
   std::string version_ = "HTTP/1.1";
   std::map<std::string, std::string> headers_;
   std::unique_ptr<HttpResponseBody> body_;
-  bool close_;
+  bool close_ = false;
 };
 
 }  // namespace Cold::Net::Http
