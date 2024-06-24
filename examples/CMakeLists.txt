@@ -23,3 +23,6 @@ target_link_libraries(ShellColorShow PRIVATE cold)
 # http
 add_executable(HttpExample1 http/example1.cpp)
 target_link_libraries(HttpExample1 PRIVATE cold)
+
+add_executable(HttpExample2 http/example2.cpp)
+target_link_libraries(HttpExample2 PRIVATE cold)
