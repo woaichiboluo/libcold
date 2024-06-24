@@ -1,13 +1,17 @@
 #include "cold/net/http/HttpRequest.h"
 
 #include "cold/net/http/HttpCommon.h"
+#include "cold/net/http/ServletContext.h"
 
 using namespace Cold;
 
 Net::Http::HttpRequest::HttpRequest(RawHttpRequest request,
                                     HttpResponse* response,
                                     ServletContext* context)
-    : rawRequest_(std::move(request)), response_(response), context_(context) {
+    : rawRequest_(std::move(request)),
+      headers_(rawRequest_.GetAllHeader()),
+      response_(response),
+      context_(context) {
   assert(response_);
   assert(context_);
   DecodeUrlAndBody();
@@ -27,8 +31,8 @@ void Net::Http::HttpRequest::DecodeUrlAndBody() {
     url_ = url_.substr(0, pos);
   }
   // parse cookie
-  if (headers_.contains("Cookies")) {
-    std::string_view cookiesView = headers_["Cookies"];
+  if (headers_.contains("Cookie")) {
+    std::string_view cookiesView = headers_["Cookie"];
     ParseKV(cookiesView, cookies_, '=', ';');
   }
   // defualt Content-Type:application/x-www-form-urlencoded
@@ -70,4 +74,28 @@ void Net::Http::HttpRequest::ParseKV(std::string_view kvStr,
     if (valuepos == kvStr.npos) return;
     kvStr = kvStr.substr(valuepos + 1);
   }
+}
+
+std::shared_ptr<Net::Http::HttpSession> Net::Http::HttpRequest::GetSession()
+    const {
+  if (cookies_.contains("SessionId")) {
+    auto it = cookies_.find("SessionId");
+    assert(it != cookies_.end());
+    auto session = context_->GetSession(it->second);
+    if (session) return session;
+  }
+  return CreateNewSession();
+}
+
+std::shared_ptr<Net::Http::HttpSession>
+Net::Http::HttpRequest::CreateNewSession() const {
+  auto session = context_->CreateSession();
+  assert(response_);
+  HttpCookie cookie;
+  cookie.key = "SessionId";
+  cookie.value = session->GetSessionId();
+  cookie.path = "/";
+  cookie.httpOnly = true;
+  response_->AddCookie(std::move(cookie));
+  return session;
 }

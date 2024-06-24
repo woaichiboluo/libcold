@@ -8,6 +8,7 @@
 
 #include "cold/net/TcpSocket.h"
 #include "cold/net/http/HttpCommon.h"
+#include "cold/net/http/RawHttpResponse.h"
 
 namespace Cold::Net::Http {
 
@@ -42,6 +43,8 @@ class TextBody : public HttpResponseBody {
 
   void SetContent(std::string body) { body_ = std::move(body); }
 
+  void Append(std::string_view c) { body_.append(c); }
+
  private:
   std::string body_;
 };
@@ -49,6 +52,26 @@ class TextBody : public HttpResponseBody {
 inline std::unique_ptr<TextBody> MakeTextBody() {
   return std::make_unique<TextBody>();
 }
+
+struct HttpCookie {
+  std::string key;
+  std::string value;
+  int maxAge = -1;
+  std::string domain = "";
+  std::string path = "";
+  bool httpOnly = false;
+  bool secure = false;
+
+  std::string Dump() const {
+    std::string cookie = fmt::format("{}={}", key, value);
+    if (maxAge >= 0) cookie.append(fmt::format(";Max-Age={}", maxAge));
+    if (!domain.empty()) cookie.append(fmt::format(";Domain={}", domain));
+    if (!path.empty()) cookie.append(fmt::format(";Path={}", path));
+    if (httpOnly) cookie.append(";HttpOnly");
+    if (secure) cookie.append(";Secure");
+    return cookie;
+  }
+};
 
 class HttpResponse {
  public:
@@ -70,6 +93,8 @@ class HttpResponse {
     body_->SetRelatedHeaders(headers_);
   }
 
+  void AddCookie(HttpCookie cookie) { cookies_.push_back(std::move(cookie)); }
+
   void MakeHeaders(std::string& headersBuf) {
     if (!body_) headers_["Content-Length"] = "0";
     headers_["Connection"] = close_ ? "close" : "keep-alive";
@@ -84,7 +109,12 @@ class HttpResponse {
       headersBuf.append(value);
       headersBuf.append(kCRLF);
     }
-    headersBuf.insert(headersBuf.end(), kCRLF.begin(), kCRLF.end());
+    for (const auto& cookie : cookies_) {
+      headersBuf.append("Set-Cookie: ");
+      headersBuf.append(cookie.Dump());
+      headersBuf.append(kCRLF);
+    }
+    headersBuf.append(kCRLF);
   }
 
   Base::Task<bool> SendBody(Net::TcpSocket& socket) {
@@ -100,10 +130,20 @@ class HttpResponse {
   }
 
   // for debug
-  std::string Dump() {
-    std::string ret;
-    MakeHeaders(ret);
-    return ret;
+  RawHttpResponse ToRawHttpResponse() const {
+    RawHttpResponse response;
+    if (!body_) {
+      response.SetHeader("Content-Length", "0");
+      response.SetBody(body_->ToRawBody());
+    }
+    response.SetHeader("Connection", close_ ? "close" : "keep-alive");
+    for (const auto& [key, value] : headers_) {
+      response.SetHeader(key, value);
+    }
+    for (const auto& cookie : cookies_) {
+      response.AddCookie(cookie.Dump());
+    }
+    return response;
   }
 
  private:
@@ -111,6 +151,7 @@ class HttpResponse {
   std::string version_ = "HTTP/1.1";
   std::map<std::string, std::string> headers_;
   std::unique_ptr<HttpResponseBody> body_;
+  std::vector<HttpCookie> cookies_;
   bool close_ = false;
 };
 

@@ -8,7 +8,10 @@
 
 #include "cold/net/http/HttpCommon.h"
 #include "cold/thread/Lock.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "third_party/uuid/boost/uuid.hpp"
+#pragma GCC diagnostic pop
 
 namespace Cold::Net::Http {
 
@@ -100,6 +103,8 @@ class HttpSessionManager {
   mutable Base::Mutex mutex_;
   std::map<std::string, SessionPtr> sessions_ GUARDED_BY(mutex_);
 };
+
+inline void HttpSession::Invalidate() { manager_->RemoveSession(sessionId_); }
 
 }  // namespace Cold::Net::Http
 

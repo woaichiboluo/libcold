@@ -11,6 +11,9 @@ class HttpFilter {
   HttpFilter() = default;
   virtual ~HttpFilter() = default;
 
+  HttpFilter(const HttpFilter&) = delete;
+  HttpFilter& operator=(const HttpFilter&) = delete;
+
   // true 放行 false 不放行
   virtual bool DoFilter(HttpRequest& request, HttpResponse& response) = 0;
 };

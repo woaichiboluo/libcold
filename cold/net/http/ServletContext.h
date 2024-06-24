@@ -1,5 +1,5 @@
-#ifndef NET_HTTP_HTTPCONTEXT
-#define NET_HTTP_HTTPCONTEXT
+#ifndef NET_HTTP_SERVLETCONTEXT
+#define NET_HTTP_SERVLETCONTEXT
 
 #include <map>
 #include <memory>
@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "cold/net/http/DispatcherServlet.h"
+#include "cold/net/http/HttpSession.h"
 #include "cold/thread/Lock.h"
 
 namespace Cold::Net::Http {
@@ -17,7 +18,8 @@ class ServletContext {
 
   ServletContext()
       : dispatcher_(std::make_unique<DefaultDispatcherServlet>()),
-        defaultServlet_(std::make_unique<DefaultHttpServlet>()) {}
+        defaultServlet_(std::make_unique<DefaultHttpServlet>()),
+        sessionManager_(std::make_unique<HttpSessionManager>()) {}
 
   ~ServletContext() = default;
 
@@ -55,14 +57,23 @@ class ServletContext {
     }
   }
 
+  std::shared_ptr<HttpSession> GetSession(const std::string& sessionId) const {
+    return sessionManager_->GetSession(sessionId);
+  }
+
+  std::shared_ptr<HttpSession> CreateSession() const {
+    return sessionManager_->CreateSession();
+  }
+
  private:
   std::string host_;
   mutable Base::Mutex mutex_;
   std::map<std::string, std::string> attributes_ GUARDED_BY(mutex_);
   std::unique_ptr<DispatcherServlet> dispatcher_;
   std::unique_ptr<HttpServlet> defaultServlet_;
+  std::unique_ptr<HttpSessionManager> sessionManager_;
 };
 
 }  // namespace Cold::Net::Http
 
-#endif /* NET_HTTP_HTTPCONTEXT */
+#endif /* NET_HTTP_SERVLETCONTEXT */

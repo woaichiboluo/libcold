@@ -91,7 +91,7 @@ class Router {
       for (const auto& part : parts) {
         auto p = std::string(part);
         if (last->children_.find("**") != last->children_.end()) {
-          chains.push_back(last->children_[p]->param_.get());
+          chains.push_back(last->children_["**"]->param_.get());
         }
         if (last->children_.find(p) == last->children_.end()) {
           return chains;

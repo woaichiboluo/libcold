@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cctype>
 #include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 
@@ -13,6 +14,7 @@ namespace Cold::Net::Http {
 
 class ServletContext;
 class HttpResponse;
+class HttpSession;
 
 class HttpRequest {
  public:
@@ -27,6 +29,7 @@ class HttpRequest {
   std::string_view GetMethod() const { return rawRequest_.GetMethod(); }
   std::string_view GetUrl() const { return url_; }
   std::string_view GetVersion() const { return rawRequest_.GetVersion(); }
+  std::shared_ptr<HttpSession> GetSession() const;
 
   // for parameters
   MAP_READ(Parameter, parameters_)
@@ -34,6 +37,8 @@ class HttpRequest {
   MAP_CRUD(Attribute, attributes_);
   // for cookies
   MAP_READ(Cookie, cookies_)
+  // for headers
+  MAP_READ(Header, headers_)
 
   bool IsKeepAlive() const {
     if (rawRequest_.HasHeader("Connection"))
@@ -49,9 +54,10 @@ class HttpRequest {
   void DecodeUrlAndBody();
   void ParseKV(std::string_view kvStr, std::map<std::string, std::string>& m,
                char kDelim, char kvDelim);
+  std::shared_ptr<HttpSession> CreateNewSession() const;
 
   RawHttpRequest rawRequest_;
-  std::map<std::string, std::string> headers_;
+  std::map<std::string, std::string>& headers_;
 
   std::string url_;
   std::string query_;

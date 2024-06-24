@@ -14,8 +14,8 @@ class HttpServer {
       : pool_(poolSize), acceptor_(pool_.GetMainIoService(), addr, reusePort) {
     badRequestBodyCall_ = []() -> std::unique_ptr<HttpResponseBody> {
       auto body = std::make_unique<TextBody>();
-      body->SetContent("<h1>400 NotFound</h1>");
-      return std::move(body);
+      body->SetContent("<h1>400 BadRequest</h1>");
+      return body;
     };
   }
 
