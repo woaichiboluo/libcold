@@ -34,126 +34,126 @@
     return Member;                                                       \
   }
 
-#define HTTP_STATUS_MAP(XX)                                                   \
-  XX(100, CONTINUE, CONTINUE)                                                 \
-  XX(101, SWITCHING_PROTOCOLS, SWITCHING_PROTOCOLS)                           \
-  XX(102, PROCESSING, PROCESSING)                                             \
-  XX(103, EARLY_HINTS, EARLY_HINTS)                                           \
-  XX(110, RESPONSE_IS_STALE, RESPONSE_IS_STALE)                               \
-  XX(111, REVALIDATION_FAILED, REVALIDATION_FAILED)                           \
-  XX(112, DISCONNECTED_OPERATION, DISCONNECTED_OPERATION)                     \
-  XX(113, HEURISTIC_EXPIRATION, HEURISTIC_EXPIRATION)                         \
-  XX(199, MISCELLANEOUS_WARNING, MISCELLANEOUS_WARNING)                       \
+#define HTTP_STATUS_MESSAGE_MAP(XX)                                           \
+  XX(100, CONTINUE, Continue)                                                 \
+  XX(101, SWITCHING_PROTOCOLS, Switching Protocols)                           \
+  XX(102, PROCESSING, Processing)                                             \
+  XX(103, EARLY_HINTS, Early Hints)                                           \
+  XX(110, RESPONSE_IS_STALE, Response Is Stale)                               \
+  XX(111, REVALIDATION_FAILED, Revalidation Failed)                           \
+  XX(112, DISCONNECTED_OPERATION, Disconnected Operation)                     \
+  XX(113, HEURISTIC_EXPIRATION, Heuristic ExpiratioN)                         \
+  XX(199, MISCELLANEOUS_WARNING, Miscellaneous Warning)                       \
   XX(200, OK, OK)                                                             \
-  XX(201, CREATED, CREATED)                                                   \
-  XX(202, ACCEPTED, ACCEPTED)                                                 \
-  XX(203, NON_AUTHORITATIVE_INFORMATION, NON_AUTHORITATIVE_INFORMATION)       \
-  XX(204, NO_CONTENT, NO_CONTENT)                                             \
-  XX(205, RESET_CONTENT, RESET_CONTENT)                                       \
-  XX(206, PARTIAL_CONTENT, PARTIAL_CONTENT)                                   \
-  XX(207, MULTI_STATUS, MULTI_STATUS)                                         \
-  XX(208, ALREADY_REPORTED, ALREADY_REPORTED)                                 \
-  XX(214, TRANSFORMATION_APPLIED, TRANSFORMATION_APPLIED)                     \
-  XX(226, IM_USED, IM_USED)                                                   \
-  XX(299, MISCELLANEOUS_PERSISTENT_WARNING, MISCELLANEOUS_PERSISTENT_WARNING) \
-  XX(300, MULTIPLE_CHOICES, MULTIPLE_CHOICES)                                 \
-  XX(301, MOVED_PERMANENTLY, MOVED_PERMANENTLY)                               \
-  XX(302, FOUND, FOUND)                                                       \
-  XX(303, SEE_OTHER, SEE_OTHER)                                               \
-  XX(304, NOT_MODIFIED, NOT_MODIFIED)                                         \
-  XX(305, USE_PROXY, USE_PROXY)                                               \
-  XX(306, SWITCH_PROXY, SWITCH_PROXY)                                         \
-  XX(307, TEMPORARY_REDIRECT, TEMPORARY_REDIRECT)                             \
-  XX(308, PERMANENT_REDIRECT, PERMANENT_REDIRECT)                             \
-  XX(400, BAD_REQUEST, BAD_REQUEST)                                           \
-  XX(401, UNAUTHORIZED, UNAUTHORIZED)                                         \
-  XX(402, PAYMENT_REQUIRED, PAYMENT_REQUIRED)                                 \
-  XX(403, FORBIDDEN, FORBIDDEN)                                               \
-  XX(404, NOT_FOUND, NOT_FOUND)                                               \
-  XX(405, METHOD_NOT_ALLOWED, METHOD_NOT_ALLOWED)                             \
-  XX(406, NOT_ACCEPTABLE, NOT_ACCEPTABLE)                                     \
-  XX(407, PROXY_AUTHENTICATION_REQUIRED, PROXY_AUTHENTICATION_REQUIRED)       \
-  XX(408, REQUEST_TIMEOUT, REQUEST_TIMEOUT)                                   \
-  XX(409, CONFLICT, CONFLICT)                                                 \
-  XX(410, GONE, GONE)                                                         \
-  XX(411, LENGTH_REQUIRED, LENGTH_REQUIRED)                                   \
-  XX(412, PRECONDITION_FAILED, PRECONDITION_FAILED)                           \
-  XX(413, PAYLOAD_TOO_LARGE, PAYLOAD_TOO_LARGE)                               \
-  XX(414, URI_TOO_LONG, URI_TOO_LONG)                                         \
-  XX(415, UNSUPPORTED_MEDIA_TYPE, UNSUPPORTED_MEDIA_TYPE)                     \
-  XX(416, RANGE_NOT_SATISFIABLE, RANGE_NOT_SATISFIABLE)                       \
-  XX(417, EXPECTATION_FAILED, EXPECTATION_FAILED)                             \
-  XX(418, IM_A_TEAPOT, IM_A_TEAPOT)                                           \
-  XX(419, PAGE_EXPIRED, PAGE_EXPIRED)                                         \
-  XX(420, ENHANCE_YOUR_CALM, ENHANCE_YOUR_CALM)                               \
-  XX(421, MISDIRECTED_REQUEST, MISDIRECTED_REQUEST)                           \
-  XX(422, UNPROCESSABLE_ENTITY, UNPROCESSABLE_ENTITY)                         \
-  XX(423, LOCKED, LOCKED)                                                     \
-  XX(424, FAILED_DEPENDENCY, FAILED_DEPENDENCY)                               \
-  XX(425, TOO_EARLY, TOO_EARLY)                                               \
-  XX(426, UPGRADE_REQUIRED, UPGRADE_REQUIRED)                                 \
-  XX(428, PRECONDITION_REQUIRED, PRECONDITION_REQUIRED)                       \
-  XX(429, TOO_MANY_REQUESTS, TOO_MANY_REQUESTS)                               \
+  XX(201, CREATED, Created)                                                   \
+  XX(202, ACCEPTED, Accepted)                                                 \
+  XX(203, NON_AUTHORITATIVE_INFORMATION, Non Authoritative Information)       \
+  XX(204, NO_CONTENT, No Content)                                             \
+  XX(205, RESET_CONTENT, Reset Content)                                       \
+  XX(206, PARTIAL_CONTENT, Partial Content)                                   \
+  XX(207, MULTI_STATUS, Multi - Status)                                       \
+  XX(208, ALREADY_REPORTED, Already Reported)                                 \
+  XX(214, TRANSFORMATION_APPLIED, Transformation Applied)                     \
+  XX(226, IM_USED, IM Used)                                                   \
+  XX(299, MISCELLANEOUS_PERSISTENT_WARNING, Miscellaneous Persistent Warning) \
+  XX(300, MULTIPLE_CHOICES, Multiple Choices)                                 \
+  XX(301, MOVED_PERMANENTLY, Moved Permanently)                               \
+  XX(302, FOUND, Found)                                                       \
+  XX(303, SEE_OTHER, See Other)                                               \
+  XX(304, NOT_MODIFIED, Not Modified)                                         \
+  XX(305, USE_PROXY, Use Proxy)                                               \
+  XX(306, SWITCH_PROXY, Switch Proxy)                                         \
+  XX(307, TEMPORARY_REDIRECT, Temporary Redirect)                             \
+  XX(308, PERMANENT_REDIRECT, Permanent Redirect)                             \
+  XX(400, BAD_REQUEST, Bad Request)                                           \
+  XX(401, UNAUTHORIZED, Unauthorized)                                         \
+  XX(402, PAYMENT_REQUIRED, Payment Required)                                 \
+  XX(403, FORBIDDEN, Forbidden)                                               \
+  XX(404, NOT_FOUND, Not Found)                                               \
+  XX(405, METHOD_NOT_ALLOWED, Method Not Allowed)                             \
+  XX(406, NOT_ACCEPTABLE, Not Acceptable)                                     \
+  XX(407, PROXY_AUTHENTICATION_REQUIRED, Proxy Authentication Required)       \
+  XX(408, REQUEST_TIMEOUT, Request Timeout)                                   \
+  XX(409, CONFLICT, Conflict)                                                 \
+  XX(410, GONE, Gone)                                                         \
+  XX(411, LENGTH_REQUIRED, Length Required)                                   \
+  XX(412, PRECONDITION_FAILED, Precondition Failed)                           \
+  XX(413, PAYLOAD_TOO_LARGE, Payload Too Large)                               \
+  XX(414, URI_TOO_LONG, URI Too Long)                                         \
+  XX(415, UNSUPPORTED_MEDIA_TYPE, Unsupported Media Type)                     \
+  XX(416, RANGE_NOT_SATISFIABLE, Range Not Satisfiable)                       \
+  XX(417, EXPECTATION_FAILED, Expectation Failed)                             \
+  XX(418, IM_A_TEAPOT, Im a teapot)                                           \
+  XX(419, PAGE_EXPIRED, Page Expired)                                         \
+  XX(420, ENHANCE_YOUR_CALM, Enhance Your Calm)                               \
+  XX(421, MISDIRECTED_REQUEST, Misdirected Request)                           \
+  XX(422, UNPROCESSABLE_ENTITY, Unprocessable Entity)                         \
+  XX(423, LOCKED, Locked)                                                     \
+  XX(424, FAILED_DEPENDENCY, Failed Dependency)                               \
+  XX(425, TOO_EARLY, Too Early)                                               \
+  XX(426, UPGRADE_REQUIRED, Upgrade Required)                                 \
+  XX(428, PRECONDITION_REQUIRED, Precondition Required)                       \
+  XX(429, TOO_MANY_REQUESTS, Too Many Requests)                               \
   XX(430, REQUEST_HEADER_FIELDS_TOO_LARGE_UNOFFICIAL,                         \
-     REQUEST_HEADER_FIELDS_TOO_LARGE_UNOFFICIAL)                              \
-  XX(431, REQUEST_HEADER_FIELDS_TOO_LARGE, REQUEST_HEADER_FIELDS_TOO_LARGE)   \
-  XX(440, LOGIN_TIMEOUT, LOGIN_TIMEOUT)                                       \
-  XX(444, NO_RESPONSE, NO_RESPONSE)                                           \
-  XX(449, RETRY_WITH, RETRY_WITH)                                             \
-  XX(450, BLOCKED_BY_PARENTAL_CONTROL, BLOCKED_BY_PARENTAL_CONTROL)           \
-  XX(451, UNAVAILABLE_FOR_LEGAL_REASONS, UNAVAILABLE_FOR_LEGAL_REASONS)       \
+     Request Header Fields Too Large Unofficial)                              \
+  XX(431, REQUEST_HEADER_FIELDS_TOO_LARGE, Request Header Fields Too Large)   \
+  XX(440, LOGIN_TIMEOUT, Login Timeout)                                       \
+  XX(444, NO_RESPONSE, No Response)                                           \
+  XX(449, RETRY_WITH, Retry With)                                             \
+  XX(450, BLOCKED_BY_PARENTAL_CONTROL, Blocked by Parental Control)           \
+  XX(451, UNAVAILABLE_FOR_LEGAL_REASONS, Unavailable For Legal Reasons)       \
   XX(460, CLIENT_CLOSED_LOAD_BALANCED_REQUEST,                                \
-     CLIENT_CLOSED_LOAD_BALANCED_REQUEST)                                     \
-  XX(463, INVALID_X_FORWARDED_FOR, INVALID_X_FORWARDED_FOR)                   \
-  XX(494, REQUEST_HEADER_TOO_LARGE, REQUEST_HEADER_TOO_LARGE)                 \
-  XX(495, SSL_CERTIFICATE_ERROR, SSL_CERTIFICATE_ERROR)                       \
-  XX(496, SSL_CERTIFICATE_REQUIRED, SSL_CERTIFICATE_REQUIRED)                 \
-  XX(497, HTTP_REQUEST_SENT_TO_HTTPS_PORT, HTTP_REQUEST_SENT_TO_HTTPS_PORT)   \
-  XX(498, INVALID_TOKEN, INVALID_TOKEN)                                       \
-  XX(499, CLIENT_CLOSED_REQUEST, CLIENT_CLOSED_REQUEST)                       \
-  XX(500, INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR)                       \
-  XX(501, NOT_IMPLEMENTED, NOT_IMPLEMENTED)                                   \
-  XX(502, BAD_GATEWAY, BAD_GATEWAY)                                           \
-  XX(503, SERVICE_UNAVAILABLE, SERVICE_UNAVAILABLE)                           \
-  XX(504, GATEWAY_TIMEOUT, GATEWAY_TIMEOUT)                                   \
-  XX(505, HTTP_VERSION_NOT_SUPPORTED, HTTP_VERSION_NOT_SUPPORTED)             \
-  XX(506, VARIANT_ALSO_NEGOTIATES, VARIANT_ALSO_NEGOTIATES)                   \
-  XX(507, INSUFFICIENT_STORAGE, INSUFFICIENT_STORAGE)                         \
-  XX(508, LOOP_DETECTED, LOOP_DETECTED)                                       \
-  XX(509, BANDWIDTH_LIMIT_EXCEEDED, BANDWIDTH_LIMIT_EXCEEDED)                 \
-  XX(510, NOT_EXTENDED, NOT_EXTENDED)                                         \
-  XX(511, NETWORK_AUTHENTICATION_REQUIRED, NETWORK_AUTHENTICATION_REQUIRED)   \
-  XX(520, WEB_SERVER_UNKNOWN_ERROR, WEB_SERVER_UNKNOWN_ERROR)                 \
-  XX(521, WEB_SERVER_IS_DOWN, WEB_SERVER_IS_DOWN)                             \
-  XX(522, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT)                             \
-  XX(523, ORIGIN_IS_UNREACHABLE, ORIGIN_IS_UNREACHABLE)                       \
-  XX(524, TIMEOUT_OCCURED, TIMEOUT_OCCURED)                                   \
-  XX(525, SSL_HANDSHAKE_FAILED, SSL_HANDSHAKE_FAILED)                         \
-  XX(526, INVALID_SSL_CERTIFICATE, INVALID_SSL_CERTIFICATE)                   \
-  XX(527, RAILGUN_ERROR, RAILGUN_ERROR)                                       \
-  XX(529, SITE_IS_OVERLOADED, SITE_IS_OVERLOADED)                             \
-  XX(530, SITE_IS_FROZEN, SITE_IS_FROZEN)                                     \
+     Client Closed Load Balanced Request)                                     \
+  XX(463, INVALID_X_FORWARDED_FOR, Invalid X Forwarded For)                   \
+  XX(494, REQUEST_HEADER_TOO_LARGE, Request Header Too Large)                 \
+  XX(495, SSL_CERTIFICATE_ERROR, SSL Certificate Error)                       \
+  XX(496, SSL_CERTIFICATE_REQUIRED, SSL Certificate Required)                 \
+  XX(497, HTTP_REQUEST_SENT_TO_HTTPS_PORT, HTTP Request Sent to HTTPS Port)   \
+  XX(498, INVALID_TOKEN, Invalid Token)                                       \
+  XX(499, CLIENT_CLOSED_REQUEST, Client Closed Request)                       \
+  XX(500, INTERNAL_SERVER_ERROR, Internal Server Error)                       \
+  XX(501, NOT_IMPLEMENTED, Not Implemented)                                   \
+  XX(502, BAD_GATEWAY, Bad Gateway)                                           \
+  XX(503, SERVICE_UNAVAILABLE, Service Unavailable)                           \
+  XX(504, GATEWAY_TIMEOUT, Gateway Timeout)                                   \
+  XX(505, HTTP_VERSION_NOT_SUPPORTED, HTTP Version Not Supported)             \
+  XX(506, VARIANT_ALSO_NEGOTIATES, Variant Also Negotiates)                   \
+  XX(507, INSUFFICIENT_STORAGE, Insufficient Storage)                         \
+  XX(508, LOOP_DETECTED, Loop Detected)                                       \
+  XX(509, BANDWIDTH_LIMIT_EXCEEDED, Bandwidth Limit Exceeded)                 \
+  XX(510, NOT_EXTENDED, Not Extended)                                         \
+  XX(511, NETWORK_AUTHENTICATION_REQUIRED, Network Authentication Required)   \
+  XX(520, WEB_SERVER_UNKNOWN_ERROR, Web Server Unknown Error)                 \
+  XX(521, WEB_SERVER_IS_DOWN, Web Server Is Down)                             \
+  XX(522, CONNECTION_TIMEOUT, Connection Timeout)                             \
+  XX(523, ORIGIN_IS_UNREACHABLE, Origin Is Unreachable)                       \
+  XX(524, TIMEOUT_OCCURED, Timeout Occurred)                                  \
+  XX(525, SSL_HANDSHAKE_FAILED, SSL Handshake Failed)                         \
+  XX(526, INVALID_SSL_CERTIFICATE, Invalid SSL Certificate)                   \
+  XX(527, RAILGUN_ERROR, Railgun Error)                                       \
+  XX(529, SITE_IS_OVERLOADED, Site Is Overloaded)                             \
+  XX(530, SITE_IS_FROZEN, Site Is Frozen)                                     \
   XX(561, IDENTITY_PROVIDER_AUTHENTICATION_ERROR,                             \
-     IDENTITY_PROVIDER_AUTHENTICATION_ERROR)                                  \
-  XX(598, NETWORK_READ_TIMEOUT, NETWORK_READ_TIMEOUT)                         \
-  XX(599, NETWORK_CONNECT_TIMEOUT, NETWORK_CONNECT_TIMEOUT)
+     Identity Provider Authentication Error)                                  \
+  XX(598, NETWORK_READ_TIMEOUT, Network Read Timeout)                         \
+  XX(599, NETWORK_CONNECT_TIMEOUT, Network Connect Timeout)
 
 namespace Cold::Net::Http {
 
 constexpr const std::string_view kCRLF = "\r\n";
 
 enum HttpStatus {
-#define XX(value, name, name1) name = value,
-  HTTP_STATUS_MAP(XX)
+#define XX(value, name, message) name = value,
+  HTTP_STATUS_MESSAGE_MAP(XX)
 #undef XX
 };
 
 inline const char* HttpStatusToHttpStatusMsg(HttpStatus status) {
   switch (status) {
-#define XX(value, name, name1) \
-  case HttpStatus::name:       \
-    return #name;
-    HTTP_STATUS_MAP(XX)
+#define XX(value, name, message) \
+  case HttpStatus::name:         \
+    return #message;
+    HTTP_STATUS_MESSAGE_MAP(XX)
 #undef XX
   }
   assert(0);
