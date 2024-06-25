@@ -24,11 +24,8 @@ Base::Task<> Net::Http::HttpServer::DoHttp(Net::TcpSocket socket) {
       co_return;
     }
     if (!parser.Parse(buf, static_cast<size_t>(n))) {  // Bad Request
-      assert(badRequestBodyCall_);
-      auto body = badRequestBodyCall_();
       response.SetStatus(HttpStatus::BAD_REQUEST);
       response.SetCloseConnection(true);
-      response.SetBody(std::move(body));
     } else if (parser.HasRequest()) {
       auto rawRequest = parser.TakeRequest();
       HttpRequest request(rawRequest, &response, &context_);
@@ -40,6 +37,13 @@ Base::Task<> Net::Http::HttpServer::DoHttp(Net::TcpSocket socket) {
     }
     // Send response
     headerBuf.clear();
+    if (response.GetStatus() != HttpStatus::OK) {
+      auto it = errorPageHandler_.find(response.GetStatus());
+      if (it == errorPageHandler_.end())
+        defaultErrorPageHandler_(response);
+      else
+        it->second(response);
+    }
     response.MakeHeaders(headerBuf);
     if (co_await socket.WriteNWithTimeout(
             headerBuf.data(), headerBuf.size(),

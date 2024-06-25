@@ -12,10 +12,16 @@ class HttpServer {
  public:
   HttpServer(Net::IpAddress& addr, size_t poolSize = 0, bool reusePort = false)
       : pool_(poolSize), acceptor_(pool_.GetMainIoService(), addr, reusePort) {
-    badRequestBodyCall_ = []() -> std::unique_ptr<HttpResponseBody> {
+    defaultErrorPageHandler_ = [](HttpResponse& response) {
       auto body = std::make_unique<TextBody>();
-      body->SetContent("<h1>400 BadRequest</h1>");
-      return body;
+      auto status = static_cast<int>(response.GetStatus());
+      auto message = response.GetStatusMessage();
+      body->SetContent(fmt::format(
+          "<html><head><title>{} {}</title></head><body><center><h1>{} "
+          "{}</h1></center><hr><center>Cold/1.0.0</center></body></html>",
+          status, message, status, message));
+      response.SetBody(std::move(body));
+      response.SetHeader("Content-type", "text/html;charset=utf-8");
     };
   }
 
@@ -53,12 +59,6 @@ class HttpServer {
     context_.dispatcher_->AddFilter(url, std::move(filter));
   }
 
-  void SetBadRequestBodyCall(
-      std::function<std::unique_ptr<HttpResponseBody>()> call) {
-    assert(!started_);
-    badRequestBodyCall_ = std::move(call);
-  }
-
   void Start() {
     acceptor_.Listen();
     acceptor_.GetIoService().CoSpawn(DoAccept());
@@ -79,12 +79,24 @@ class HttpServer {
 
   bool IsStarted() const { return started_; }
 
+  void AddErrorPageHandler(HttpStatus status,
+                           std::function<void(HttpResponse&)> callback) {
+    assert(!started_);
+    errorPageHandler_[status] = std::move(callback);
+  }
+
+  void SetDefaultErrorPageHandler(std::function<void(HttpResponse&)> callback) {
+    assert(!started_);
+    defaultErrorPageHandler_ = std::move(callback);
+  }
+
  private:
   Base::IoServicePool pool_;
   Net::Acceptor acceptor_;
   ServletContext context_;
   bool started_ = false;
-  std::function<std::unique_ptr<HttpResponseBody>()> badRequestBodyCall_;
+  std::map<HttpStatus, std::function<void(HttpResponse&)>> errorPageHandler_;
+  std::function<void(HttpResponse&)> defaultErrorPageHandler_;
 };
 
 }  // namespace Cold::Net::Http

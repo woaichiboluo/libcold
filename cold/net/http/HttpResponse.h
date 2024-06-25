@@ -79,6 +79,10 @@ class HttpResponse {
   ~HttpResponse() = default;
 
   void SetStatus(HttpStatus status) { status_ = status; }
+  HttpStatus GetStatus() const { return status_; }
+  std::string GetStatusMessage() const {
+    return HttpStatusToHttpStatusMsg(status_);
+  }
 
   void SetVersion(std::string version) { version_ = std::move(version); }
 

@@ -26,10 +26,7 @@ class DefaultHttpServlet : public HttpServlet {
   ~DefaultHttpServlet() override = default;
 
   void Handle(HttpRequest& request, HttpResponse& response) override {
-    auto body = MakeTextBody();
-    body->SetContent("<h1>404 Not Found</h1>");
     response.SetStatus(HttpStatus::NOT_FOUND);
-    response.SetBody(std::move(body));
   }
 };
 
