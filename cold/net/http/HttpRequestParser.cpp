@@ -53,6 +53,9 @@ int Net::Http::HttpRequestParser::OnUrl(llhttp_t* parser, const char* at,
 int Net::Http::HttpRequestParser::OnUrlComplete(llhttp_t* parser) {
   auto self = static_cast<HttpRequestParser*>(parser->data);
   self->curRequest_.SetUrl(std::move(self->buf_));
+  // Bad url
+  if (self->curRequest_.GetUrl().find("..") != std::string_view::npos)
+    return -1;
   return 0;
 }
 
