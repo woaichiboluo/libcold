@@ -10,7 +10,7 @@ class TcpSocket;
 class Acceptor : public BasicSocket {
  public:
   Acceptor(Base::IoService& service, const IpAddress& listenAddr,
-           bool reusePort);
+           bool reusePort, bool enableSSL = false);
 
   ~Acceptor() override;
 
@@ -27,6 +27,7 @@ class Acceptor : public BasicSocket {
  private:
   int idleFd_;
   bool listened_ = false;
+  bool enableSSL_ = false;
 };
 
 }  // namespace Cold::Net

@@ -8,14 +8,21 @@
 #include "cold/net/TcpSocket.h"
 #include "cold/thread/Thread.h"
 
+#ifdef COLD_NET_ENABLE_SSL
+#include "cold/net/ssl/SSLContext.h"
+#include "cold/util/ScopeUtil.h"
+#endif
+
 using namespace Cold;
 
 Net::Acceptor::Acceptor(Base::IoService& service, const IpAddress& listenAddr,
-                        bool reusePort)
+                        bool reusePort, bool enableSSL)
     : BasicSocket(service,
                   socket(listenAddr.IsIpv4() ? AF_INET : AF_INET6,
-                         SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)),
-      idleFd_(open("/dev/null", O_RDONLY | O_CLOEXEC)) {
+                         SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0),
+                  false),
+      idleFd_(open("/dev/null", O_RDONLY | O_CLOEXEC)),
+      enableSSL_(enableSSL) {
   assert(idleFd_ >= 0);
   if (fd_ < 0) {
     Base::FATAL("Cannot create listen fd. errno: {}. reason: {}", errno,
@@ -29,6 +36,9 @@ Net::Acceptor::Acceptor(Base::IoService& service, const IpAddress& listenAddr,
     Base::FATAL("Cannot bind listen fd. errno: {}. reason: {}", errno,
                 Base::ThisThread::ErrorMsg());
   }
+#ifndef COLD_NET_ENABLE_SSL
+  enableSSL_ = false;
+#endif
 }
 
 Net::Acceptor::~Acceptor() { close(idleFd_); }
@@ -52,9 +62,54 @@ Base::Task<Net::TcpSocket> Net::Acceptor::Accept() {
   return Accept(*ioService_);
 }
 
+#ifdef COLD_NET_ENABLE_SSL
+
+Base::Task<SSL*> DoHandleShake(Base::IoService* service, int& sockfd,
+                               Net::IpAddress addr) {
+  auto ssl = SSL_new(Net::SSLContext::GetInstance().GetContext());
+  bool error = false;
+  Base::ScopeGuard guard([&]() {
+    if (error) {
+      SSL_free(ssl);
+      close(sockfd);
+      sockfd = -1;
+    }
+  });
+  if (ssl == nullptr) {
+    Base::ERROR("SSL_new failed. errno: {}, reason: {}", errno,
+                Base::ThisThread::ErrorMsg());
+    error = true;
+    co_return nullptr;
+  }
+  if (!SSL_set_fd(ssl, sockfd)) {
+    error = true;
+    co_return nullptr;
+  }
+  SSL_set_accept_state(ssl);
+  while (true) {
+    auto ret = co_await Net::IoTimeoutAwaitable(
+        service, Net::HandleShakeAwaitable(service, sockfd, ssl),
+        std::chrono::seconds(3));
+    if (ret == SSL_ERROR_NONE) break;
+    if (ret != SSL_ERROR_WANT_READ && ret != SSL_ERROR_WANT_WRITE) {
+      error = true;
+      co_return nullptr;
+    }
+  }
+  co_return ssl;
+}
+
+#endif
+
 Base::Task<Net::TcpSocket> Net::Acceptor::Accept(Base::IoService& service) {
   assert(listened_);
   auto [sockfd, addr] = co_await AcceptAwaitable(ioService_, fd_);
+#ifdef COLD_NET_ENABLE_SSL
+  if (enableSSL_) {
+    auto ssl = co_await DoHandleShake(&service, sockfd, addr);
+    co_return Net::TcpSocket(service, localAddress_, addr, sockfd, ssl);
+  }
+#endif
   if (sockfd < 0) {
     if (errno == EMFILE) {
       close(idleFd_);

@@ -12,6 +12,12 @@
 #include "cold/time/Timer.h"
 #include "sys/sendfile.h"
 
+#ifdef COLD_NET_ENABLE_SSL
+#include <openssl/ssl.h>
+#else
+class SSL;
+#endif
+
 namespace Cold::Net {
 
 class IoAwaitableBase {
@@ -46,6 +52,8 @@ class IoAwaitableBase {
     }
   }
 
+  void SetIoType(IoType type) { type_ = type; }
+
   bool GetTimeout() const { return timeout_; }
 
   Base::IoService* service_;
@@ -64,11 +72,14 @@ class IoAwaitableBase {
 class ReadAwaitable : public IoAwaitableBase {
  public:
   ReadAwaitable(Base::IoService* service, int fd, void* buf, size_t count,
-                std::atomic<bool>& connected)
+                std::atomic<bool>& connected, SSL* ssl)
       : IoAwaitableBase(service, fd, IoAwaitableBase::kREAD),
         buf_(buf),
         count_(count),
-        connected_(connected) {}
+        connected_(connected),
+        ssl_(ssl) {
+    (void)ssl_;
+  }
   ~ReadAwaitable() override = default;
 
   bool await_ready() noexcept { return !connected_; }
@@ -78,6 +89,12 @@ class ReadAwaitable : public IoAwaitableBase {
       errno = GetTimeout() ? ETIMEDOUT : ENOTCONN;
       return -1;
     }
+#ifdef COLD_NET_ENABLE_SSL
+    if (ssl_) {
+      auto n = SSL_read(ssl_, buf_, static_cast<int>(count_));
+      return n;
+    }
+#endif
     auto n = read(fd_, buf_, count_);
     return n;
   }
@@ -86,21 +103,37 @@ class ReadAwaitable : public IoAwaitableBase {
   void* buf_;
   size_t count_;
   const std::atomic<bool>& connected_;
+  SSL* ssl_;
 };
 
 class WriteAwaitable : public IoAwaitableBase {
  public:
   WriteAwaitable(Base::IoService* service, int fd, const void* buf,
-                 size_t count, std::atomic<bool>& connected)
+                 size_t count, std::atomic<bool>& connected, SSL* ssl)
       : IoAwaitableBase(service, fd, IoAwaitableBase::kWRITE),
         buf_(buf),
         count_(count),
-        connected_(connected) {}
+        connected_(connected),
+        ssl_(ssl) {
+    (void)ssl_;
+  }
 
   ~WriteAwaitable() override = default;
 
   bool await_ready() noexcept {
     if (!connected_) return true;
+#ifdef COLD_NET_ENABLE_SSL
+    if (ssl_) {
+      retValue_ = SSL_write(ssl_, buf_, static_cast<int>(count_));
+      if (retValue_ > 0) {
+        ready_ = true;
+      } else {
+        int e = SSL_get_error(ssl_, static_cast<int>(retValue_));
+        if (e != SSL_ERROR_WANT_WRITE) ready_ = true;
+      }
+      return ready_;
+    }
+#endif
     retValue_ = write(fd_, buf_, count_);
     if (retValue_ >= 0 || errno != EAGAIN) ready_ = true;
     return ready_;
@@ -112,6 +145,11 @@ class WriteAwaitable : public IoAwaitableBase {
       return -1;
     }
     if (ready_) return retValue_;
+#ifdef COLD_NET_ENABLE_SSL
+    if (ssl_) {
+      return SSL_write(ssl_, buf_, static_cast<int>(count_));
+    }
+#endif
     return write(fd_, buf_, count_);
   }
 
@@ -121,6 +159,7 @@ class WriteAwaitable : public IoAwaitableBase {
   const std::atomic<bool>& connected_;
   bool ready_ = false;
   ssize_t retValue_ = -1;
+  SSL* ssl_;
 };
 
 class AcceptAwaitable : public IoAwaitableBase {
@@ -343,6 +382,52 @@ class IoTimeoutAwaitable {
   Base::Timer timer_;
   RetType retValue_;
 };
+
+#ifdef COLD_NET_ENABLE_SSL
+
+class HandleShakeAwaitable : public IoAwaitableBase {
+ public:
+  HandleShakeAwaitable(Base::IoService* service, int fd, SSL* ssl)
+      : IoAwaitableBase(service, fd, IoType::kREAD), ssl_(ssl) {}
+  ~HandleShakeAwaitable() override = default;
+
+  bool GetTimeout() const { return timeout_; }
+
+  void SetTimeout() {
+    timeout_ = true;
+    StopListeningIo();
+  }
+
+  bool await_ready() noexcept {
+    retValue_ = SSL_do_handshake(ssl_);
+    if (retValue_ == 1) return true;
+    error_ = SSL_get_error(ssl_, retValue_);
+    if (error_ == SSL_ERROR_WANT_READ) {
+      SetIoType(IoType::kREAD);
+    } else if (error_ == SSL_ERROR_WANT_WRITE) {
+      SetIoType(IoType::kWRITE);
+    } else {
+      return true;
+    }
+    return false;
+  }
+
+  int await_resume() noexcept {
+    if (GetTimeout()) {
+      errno = ETIMEDOUT;
+      return -1;
+    }
+    return retValue_ == 1 ? SSL_ERROR_NONE : error_;
+  }
+
+ private:
+  SSL* ssl_;
+  int retValue_ = 0;
+  int error_ = 0;
+  bool timeout_ = false;
+};
+
+#endif
 
 }  // namespace Cold::Net
 

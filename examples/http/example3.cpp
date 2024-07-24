@@ -1,4 +1,3 @@
-
 #include "cold/net/http/HttpServer.h"
 #include "cold/net/http/StaticFileServlet.h"
 

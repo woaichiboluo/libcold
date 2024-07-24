@@ -23,6 +23,11 @@ IgnoreSigPipe __;
 }  // namespace
 
 Net::BasicSocket::~BasicSocket() {
+  if (ssl_) {
+#ifdef COLD_NET_ENABLE_SSL
+    SSL_free(ssl_);
+#endif
+  }
   if (fd_ >= 0) close(fd_);
 }
 
@@ -31,10 +36,12 @@ Net::BasicSocket::BasicSocket(BasicSocket&& other)
       fd_(other.fd_),
       localAddress_(other.localAddress_),
       remoteAddress_(other.remoteAddress_),
-      connected_(other.connected_.load()) {
+      connected_(other.connected_.load()),
+      ssl_(other.ssl_) {
   other.ioService_ = nullptr;
   other.fd_ = -1;
   other.connected_ = false;
+  other.ssl_ = nullptr;
 }
 
 Net::BasicSocket& Net::BasicSocket::operator=(BasicSocket&& other) {
@@ -45,9 +52,11 @@ Net::BasicSocket& Net::BasicSocket::operator=(BasicSocket&& other) {
   localAddress_ = other.localAddress_;
   remoteAddress_ = other.remoteAddress_;
   connected_ = other.connected_.load();
+  ssl_ = other.ssl_;
   other.ioService_ = nullptr;
   other.fd_ = -1;
   other.connected_ = false;
+  other.ssl_ = nullptr;
   return *this;
 }
 
@@ -63,6 +72,11 @@ bool Net::BasicSocket::Bind(IpAddress address) {
   return false;
 }
 
-void Net::BasicSocket::ShutDown() { shutdown(fd_, SHUT_WR); }
+void Net::BasicSocket::ShutDown() {
+#ifdef COLD_NET_ENABLE_SSL
+  if (ssl_) SSL_shutdown(ssl_);
+#endif
+  shutdown(fd_, SHUT_WR);
+}
 
 void Net::BasicSocket::Close() { shutdown(fd_, SHUT_RDWR); }

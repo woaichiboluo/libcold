@@ -10,8 +10,10 @@ namespace Cold::Net::Http {
 
 class HttpServer {
  public:
-  HttpServer(Net::IpAddress& addr, size_t poolSize = 0, bool reusePort = false)
-      : pool_(poolSize), acceptor_(pool_.GetMainIoService(), addr, reusePort) {
+  HttpServer(Net::IpAddress& addr, size_t poolSize = 0, bool reusePort = false,
+             bool enableSSL = false)
+      : pool_(poolSize),
+        acceptor_(pool_.GetMainIoService(), addr, reusePort, enableSSL) {
     defaultErrorPageHandler_ = [](HttpResponse& response) {
       auto body = std::make_unique<TextBody>();
       auto status = static_cast<int>(response.GetStatus());

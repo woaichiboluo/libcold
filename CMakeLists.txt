@@ -10,6 +10,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Wno-old-style-cas
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wconversion -Wshadow -Woverloaded-virtual")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_HEADER_ONLY")
 
+
 if("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
     set(BUILD_TEST ON)
     add_compile_options(-fsanitize=address)
@@ -22,6 +23,15 @@ else()
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# find openssl
+find_package(OpenSSL REQUIRED)
+if(OPENSSL_FOUND)
+    message("Found OpenSSL: ${OPENSSL_INCLUDE_DIR}")
+    link_libraries(${OPENSSL_LIBRARIES})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCOLD_NET_ENABLE_SSL")
+    set(BUILD_SSL_MODE ON)
+endif()
+
 message("CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message("CMAKE_C_COMPILER: ${CMAKE_CXX_COMPILER_ID}")
 message("CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER_ID}")
@@ -30,6 +40,7 @@ message("CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
 
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/third_party/uuid)
+
 
 add_subdirectory(third_party/llhttp)
 add_subdirectory(cold)

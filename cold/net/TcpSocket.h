@@ -13,10 +13,11 @@ class TcpSocket : public Net::BasicSocket {
  public:
   TcpSocket() = default;
 
-  TcpSocket(Base::IoService& service, bool ipv6 = false)
-      : Net::BasicSocket(
-            service, socket(ipv6 ? AF_INET6 : AF_INET,
-                            SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0)) {
+  TcpSocket(Base::IoService& service, bool enableSSL = false, bool ipv6 = false)
+      : Net::BasicSocket(service,
+                         socket(ipv6 ? AF_INET6 : AF_INET,
+                                SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0),
+                         enableSSL) {
     if (fd_ < 0) {
       Base::ERROR("create TcpSocket error. errno: {} Reason: {}", errno,
                   Base::ThisThread::ErrorMsg());
@@ -24,8 +25,8 @@ class TcpSocket : public Net::BasicSocket {
   }
 
   TcpSocket(Base::IoService& service, const IpAddress& local,
-            const IpAddress& remote, int fd)
-      : BasicSocket(service, local, remote, fd) {
+            const IpAddress& remote, int fd, SSL* ssl = nullptr)
+      : BasicSocket(service, local, remote, fd, ssl) {
     if (fd >= 0) connected_ = true;
   }
 
@@ -38,6 +39,9 @@ class TcpSocket : public Net::BasicSocket {
     BasicSocket::Close();
     connected_ = false;
   }
+
+  // for debug
+  SSL* GetSSL() const { return ssl_; }
 
   [[nodiscard]] Base::Task<ssize_t> ReadN(char* buf, size_t n) {
     size_t byteAlreadyRead = 0;
@@ -75,6 +79,24 @@ class TcpSocket : public Net::BasicSocket {
     }
     co_return static_cast<ssize_t>(n);
   }
+
+#ifdef COLD_NET_ENABLE_SSL
+  [[nodiscard]] Base::Task<bool> DoHandleShake() {
+    Base::INFO("ssl_:{}", reinterpret_cast<uintptr_t>(ssl_));
+    assert(ssl_);
+    SSL_set_connect_state(ssl_);
+    while (true) {
+      auto ret = co_await Net::IoTimeoutAwaitable(
+          ioService_, Net::HandleShakeAwaitable(ioService_, fd_, ssl_),
+          std::chrono::seconds(3));
+      if (ret == SSL_ERROR_NONE) break;
+      if (ret != SSL_ERROR_WANT_READ && ret != SSL_ERROR_WANT_WRITE) {
+        co_return false;
+      }
+    }
+    co_return true;
+  }
+#endif
 };
 
 }  // namespace Cold::Net
