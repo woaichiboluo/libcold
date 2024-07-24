@@ -38,6 +38,7 @@ class Config {
          },
          "http": {
            "read-timeout-ms": 15000,
+           "sendfile-timeout-ms": 15000,
            "write-timeout-ms": 15000,
            "max-url-size": 190000,
            "max-header-field-size": 1024,

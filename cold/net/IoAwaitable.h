@@ -1,6 +1,8 @@
 #ifndef COLD_NET_IOAWAITABLE
 #define COLD_NET_IOAWAITABLE
 
+#include <unistd.h>
+
 #include <cerrno>
 #include <chrono>
 
@@ -8,6 +10,7 @@
 #include "cold/coro/Task.h"
 #include "cold/net/IpAddress.h"
 #include "cold/time/Timer.h"
+#include "sys/sendfile.h"
 
 namespace Cold::Net {
 
@@ -261,6 +264,38 @@ class ConnectAwaitable : public IoAwaitableBase {
   IpAddress* remoteAddress_;
   int retValue_ = 0;
   bool notInprogress_ = false;
+};
+
+class SendFileAwaitable : public IoAwaitableBase {
+ public:
+  SendFileAwaitable(Base::IoService* service, int outFd, int inFd,
+                    off_t* offset, size_t count)
+      : IoAwaitableBase(service, outFd, IoAwaitableBase::kWRITE),
+        inFd_(inFd),
+        offset_(offset),
+        count_(count) {}
+
+  bool await_ready() noexcept {
+    retValue_ = sendfile(fd_, inFd_, offset_, count_);
+    if (retValue_ >= 0 || errno != EAGAIN) ready_ = true;
+    return ready_;
+  }
+
+  ssize_t await_resume() noexcept {
+    if (GetTimeout()) {
+      errno = ETIMEDOUT;
+      return -1;
+    }
+    if (ready_) return retValue_;
+    return sendfile(fd_, inFd_, offset_, count_);
+  }
+
+ private:
+  int inFd_;
+  off_t* offset_;
+  size_t count_;
+  bool ready_ = false;
+  ssize_t retValue_ = 0;
 };
 
 template <typename AWAITABLE, typename REP, typename PERIOD>

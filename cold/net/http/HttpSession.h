@@ -5,8 +5,8 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 
-#include "cold/net/http/HttpCommon.h"
 #include "cold/thread/Lock.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
@@ -16,10 +16,6 @@
 namespace Cold::Net::Http {
 
 class HttpSessionManager;
-
-template <typename T>
-concept isCopyable =
-    std::is_copy_assignable_v<T> && std::is_copy_constructible_v<T>;
 
 class HttpSession {
  public:
@@ -35,8 +31,13 @@ class HttpSession {
   void Invalidate();
   // for attribute
   template <typename T>
-  void SetAttribute(std::string key, T value) requires isCopyable<T> {
+  void SetAttribute(std::string key, T value) requires
+      std::is_copy_assignable_v<T> && std::is_copy_constructible_v<T> {
     attributes_[std::move(key)] = std::any(std::move(value));
+  }
+
+  void SetAttribute(std::string key, const char* value) {
+    attributes_[std::move(key)] = std::any(std::string(value));
   }
 
   template <typename T>

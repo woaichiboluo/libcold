@@ -18,8 +18,8 @@ class Router {
   using ServletPtr = std::unique_ptr<HttpServlet>;
 
   Router()
-      : servletRouterRoot_(std::make_unique<TrieNode<HttpServlet>>()),
-        filterRouterRoot_(std::make_unique<TrieNode<HttpFilter>>()) {}
+      : servletRouterRoot_(std::make_unique<ServletNode>()),
+        filterRouterRoot_(std::make_unique<FilterNode>()) {}
 
   ~Router() = default;
 
@@ -43,22 +43,21 @@ class Router {
   }
 
  private:
-  template <typename T>
-  struct TrieNode {
+  class ServletNode {
    public:
-    TrieNode() = default;
-    ~TrieNode() = default;
+    ServletNode() = default;
+    ~ServletNode() = default;
 
-    TrieNode(const TrieNode&) = delete;
-    TrieNode& operator=(const TrieNode&) = delete;
+    ServletNode(const ServletNode&) = delete;
+    ServletNode& operator=(const ServletNode&) = delete;
 
-    void Insert(std::string_view url, std::unique_ptr<T> ptr) {
+    void Insert(std::string_view url, std::unique_ptr<HttpServlet> ptr) {
       auto parts = Base::SplitToViews(url, "/", true);
       auto last = this;
       for (const auto& part : parts) {
         auto p = std::string(part);
         if (last->children_.find(p) == last->children_.end()) {
-          auto node = std::make_unique<TrieNode>();
+          auto node = std::make_unique<ServletNode>();
           last->children_.insert({p, std::move(node)});
         }
         last = last->children_[p].get();
@@ -67,7 +66,7 @@ class Router {
       last->param_ = std::move(ptr);
     }
 
-    T* TryMatch(std::string_view url) {
+    HttpServlet* TryMatch(std::string_view url) {
       auto parts = Base::SplitToViews(url, "/", true);
       auto last = this;
       for (const auto& part : parts) {
@@ -84,14 +83,44 @@ class Router {
       return last->param_.get();
     }
 
-    std::vector<T*> MatchChain(std::string_view url) {
-      std::vector<T*> chains;
+   private:
+    std::map<std::string, std::unique_ptr<ServletNode>> children_;
+    std::unique_ptr<HttpServlet> param_;
+  };
+
+  struct FilterNode {
+   public:
+    FilterNode() = default;
+    ~FilterNode() = default;
+
+    FilterNode(const FilterNode&) = delete;
+    FilterNode& operator=(const FilterNode&) = delete;
+
+    void Insert(std::string_view url, std::unique_ptr<HttpFilter> ptr) {
+      auto parts = Base::SplitToViews(url, "/", true);
+      auto last = this;
+      for (const auto& part : parts) {
+        auto p = std::string(part);
+        if (last->children_.find(p) == last->children_.end()) {
+          auto node = std::make_unique<FilterNode>();
+          last->children_.insert({p, std::move(node)});
+        }
+        last = last->children_[p].get();
+      }
+      assert(last);
+      last->params_.push_back(std::move(ptr));
+    }
+
+    std::vector<HttpFilter*> MatchChain(std::string_view url) {
+      std::vector<HttpFilter*> chains;
       auto parts = Base::SplitToViews(url, "/", true);
       auto last = this;
       for (const auto& part : parts) {
         auto p = std::string(part);
         if (last->children_.find("**") != last->children_.end()) {
-          chains.push_back(last->children_["**"]->param_.get());
+          for (const auto& filter : last->children_["**"]->params_) {
+            chains.push_back(filter.get());
+          }
         }
         if (last->children_.find(p) == last->children_.end()) {
           return chains;
@@ -99,17 +128,21 @@ class Router {
         last = last->children_[p].get();
       }
       assert(last);
-      if (last->param_) chains.push_back(last->param_.get());
+      if (!last->params_.empty()) {
+        for (const auto& filter : last->params_) {
+          chains.push_back(filter.get());
+        }
+      }
       return chains;
     }
 
    private:
-    std::map<std::string, std::unique_ptr<TrieNode>> children_;
-    std::unique_ptr<T> param_;
+    std::map<std::string, std::unique_ptr<FilterNode>> children_;
+    std::vector<std::unique_ptr<HttpFilter>> params_;
   };
 
-  using ServletRouterRoot = std::unique_ptr<TrieNode<HttpServlet>>;
-  using FilterRouterRoot = std::unique_ptr<TrieNode<HttpFilter>>;
+  using ServletRouterRoot = std::unique_ptr<ServletNode>;
+  using FilterRouterRoot = std::unique_ptr<FilterNode>;
 
   ServletRouterRoot servletRouterRoot_;
   FilterRouterRoot filterRouterRoot_;

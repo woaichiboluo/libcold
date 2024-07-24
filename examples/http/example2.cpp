@@ -53,7 +53,7 @@ class LoginPageServlet : public HttpServlet {
     response.SetHeader("Content-type", "text/html;charset=utf-8");
     if (request.HasAttribute("message")) {
       body->Append(fmt::format("<h2 style='color:red;'>{}</h2>",
-                               request.GetAttribute("message")));
+                               *request.GetAttribute<std::string>("message")));
     }
     body->Append(
         R"(
@@ -116,5 +116,6 @@ int main() {
                       request.GetSession()->Invalidate();
                       response.SendRedirect("/");
                     });
+  Base::INFO("example3:basic login demo. Run at port: 8080");
   server.Start();
 }

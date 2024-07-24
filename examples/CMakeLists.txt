@@ -26,3 +26,6 @@ target_link_libraries(HttpExample1 PRIVATE cold)
 
 add_executable(HttpExample2 http/example2.cpp)
 target_link_libraries(HttpExample2 PRIVATE cold)
+
+add_executable(HttpExample3 http/example3.cpp)
+target_link_libraries(HttpExample3 PRIVATE cold)

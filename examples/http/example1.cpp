@@ -20,5 +20,6 @@ int main() {
       "/hello2", [](HttpRequest& request, HttpResponse& response) {
         request.GetServletContext()->ForwardTo("/hello", request, response);
       });
+  Base::INFO("example1:basic servlet usage. Run at port: 8080");
   server.Start();
 }
