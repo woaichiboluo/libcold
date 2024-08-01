@@ -52,7 +52,7 @@ class RpcCodec {
   bool WriteMessageToBuffer(const google::protobuf::Message& message) {
     buf_.clear();
     uint64_t size = message.ByteSizeLong();
-    buf_.reserve(size + sizeof(size));
+    buf_.resize(size + sizeof(size));
     const char* begin = reinterpret_cast<const char*>(&size);
     size = Net::Host64ToNetwork64(size);
     buf_.insert(buf_.end(), begin, begin + sizeof(size));

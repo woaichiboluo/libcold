@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_HEADER_ONLY")
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
     set(BUILD_TEST ON)
-    add_compile_options(-fsanitize=address)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
     link_libraries(asan)
 
     if("${CMAKE_CXX_COMPILER_ID}" STREQUAL Clang)
@@ -24,12 +24,25 @@ else()
 endif()
 
 # find openssl
-find_package(OpenSSL REQUIRED)
+find_package(OpenSSL)
 if(OPENSSL_FOUND)
     message("Found OpenSSL: ${OPENSSL_INCLUDE_DIR}")
-    link_libraries(${OPENSSL_LIBRARIES})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCOLD_NET_ENABLE_SSL")
     set(BUILD_SSL_MODE ON)
+else()
+    set(BUILD_SSL_MODE OFF)
+    message("Not found OpenSSL")
+endif()
+
+#find protobuf
+find_package(protobuf CONFIG)
+if(protobuf_FOUND)
+    message("Found Protobuf")
+    include_directories(${protobuf_INCLUDE_DIR})
+    set(BUILD_PROTOBUF_MODE ON)
+else()
+    set(BUILD_PROTOBUF_MODE OFF)
+    message("Not found Protobuf")
 endif()
 
 message("CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")

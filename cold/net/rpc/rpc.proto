@@ -8,11 +8,13 @@ enum ErrorCode {
   NO_METHOD = 2;
   BAD_REQUEST = 3;
   TIMEOUT = 4;
+  INTERNAL_SERVER_ERROR = 5;
 }
 
 message RpcMessage {
-  bytes service = 1;
-  bytes method = 2;
-  bytes payload = 3;
-  ErrorCode error = 4;
+  int64 id = 1;
+  bytes service = 2;
+  bytes method = 3;
+  bytes payload = 4;
+  ErrorCode error = 5;
 }

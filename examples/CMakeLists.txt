@@ -34,3 +34,7 @@ if(${BUILD_SSL_MODE})
   add_executable(HttpExample4 http/example4.cpp)
   target_link_libraries(HttpExample4 PRIVATE cold)
 endif()
+
+if(${BUILD_PROTOBUF_MODE})
+  add_subdirectory(rpc)
+endif()

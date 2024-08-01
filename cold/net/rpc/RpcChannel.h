@@ -10,8 +10,11 @@
 
 namespace Cold::Net::Rpc {
 
-class RpcChannel : public google::protobuf::RpcChannel {
+class RpcChannel : public google::protobuf::RpcChannel,
+                   public std::enable_shared_from_this<RpcChannel> {
  public:
+  RpcChannel() = default;
+
   explicit RpcChannel(Net::TcpSocket socket)
       : socket_(std::move(socket)), forServer_(false) {}
 
@@ -20,7 +23,7 @@ class RpcChannel : public google::protobuf::RpcChannel {
                  services)
       : socket_(std::move(socket)), forServer_(true), services_(services) {}
 
-  ~RpcChannel() = default;
+  ~RpcChannel() override = default;
 
   void CallMethod(const google::protobuf::MethodDescriptor* method,
                   google::protobuf::RpcController* controller,
@@ -30,18 +33,37 @@ class RpcChannel : public google::protobuf::RpcChannel {
 
   Base::Task<> DoRpc();
 
- private:
-  Base::Task<> DoServerRpc();
-  Base::Task<> DoClientRpc();
+  void Reset(Net::TcpSocket socket) { socket_ = std::move(socket); }
 
-  Base::Task<> SendResponse(const google::protobuf::Message& response);
-  Base::Task<> SendResponse(
-      std::unique_ptr<google::protobuf::Message> response);
+ private:
+  Base::Task<> DoServerRpc(std::string_view messageStr);
+  Base::Task<> DoClientRpc(std::string_view messageStr);
+
+  // for server call method callback
+  void SendResponse(google::protobuf::Message* response,
+                    std::pair<std::shared_ptr<RpcChannel>, int64_t> selfAndId);
+
+  // for client call method
+  Base::Task<> SendResponse(std::unique_ptr<google::protobuf::Message> response,
+                            std::shared_ptr<RpcChannel> self);
+
+  // send wrapped RpcMessage
+  Base::Task<> Send(const google::protobuf::Message& message);
 
   Net::TcpSocket socket_;
   bool forServer_;
   RpcCodec codec_;
-  const std::unordered_map<std::string, google::protobuf::Service*>* services_;
+
+  static std::atomic_int64_t id_;
+
+  struct OutstandingCall {
+    google::protobuf::Message* response;
+    google::protobuf::Closure* done;
+  };
+
+  std::unordered_map<int64_t, OutstandingCall> outstandings_;
+  const std::unordered_map<std::string, google::protobuf::Service*>* services_ =
+      nullptr;
 };
 
 }  // namespace Cold::Net::Rpc
