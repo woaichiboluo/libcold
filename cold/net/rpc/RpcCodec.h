@@ -53,11 +53,11 @@ class RpcCodec {
     buf_.clear();
     uint64_t size = message.ByteSizeLong();
     buf_.resize(size + sizeof(size));
-    const char* begin = reinterpret_cast<const char*>(&size);
     size = Net::Host64ToNetwork64(size);
-    buf_.insert(buf_.end(), begin, begin + sizeof(size));
-    return message.SerializePartialToArray(buf_.data() + sizeof(size),
-                                           static_cast<int>(size));
+    const char* begin = reinterpret_cast<const char*>(&size);
+    memcpy(buf_.data(), begin, sizeof(size));
+    return message.SerializePartialToArray(
+        buf_.data() + sizeof(size), static_cast<int>(message.ByteSizeLong()));
   }
 
   const std::vector<char>& GetBuffer() const { return buf_; }
