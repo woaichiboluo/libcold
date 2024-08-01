@@ -1,3 +1,4 @@
+#include "cold/log/Logger.h"
 #include "cold/net/rpc/RpcServer.h"
 #include "echo.pb.h"
 
@@ -9,6 +10,7 @@ class EchoServiceImpl : public Echo::EchoService {
               const ::Echo::EchoRequest* request,
               ::Echo::EchoResponse* response,
               ::google::protobuf::Closure* done) override {
+    Cold::Base::INFO("Call method DoEcho :{}", request->data());
     response->set_data(request->data());
     done->Run();
   }

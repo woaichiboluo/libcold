@@ -43,16 +43,15 @@ class EchoRpcClient {
   Echo::EchoService::Stub stub_;
 };
 
-Base::Task<> DoRpc(Base::IoService& service) {
-  EchoRpcClient client(service);
+Base::Task<> DoRpc(EchoRpcClient& client) {
   if (!co_await client.Connect(Net::IpAddress(8888))) co_return;
-  Base::INFO("Connected");
   client.DoEcho("hello world");
-  client.DoEcho("hello another world");
+  // client.DoEcho("hello another world");
 }
 
 int main() {
   Base::IoService service;
-  service.CoSpawn(DoRpc(service));
+  EchoRpcClient client(service);
+  service.CoSpawn(DoRpc(client));
   service.Start();
 }
