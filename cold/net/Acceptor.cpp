@@ -38,6 +38,10 @@ Net::Acceptor::Acceptor(Base::IoService& service, const IpAddress& listenAddr,
   }
 #ifndef COLD_NET_ENABLE_SSL
   enableSSL_ = false;
+#else
+  if (enableSSL_ && !SSLContext::GetInstance().CertLoaded()) {
+    Base::FATAL("SSL Cert not loaded.");
+  }
 #endif
 }
 
