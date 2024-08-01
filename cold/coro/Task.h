@@ -20,7 +20,7 @@ class PromiseBase {
 
   auto initial_suspend() noexcept { return std::suspend_always(); }
   auto final_suspend() noexcept { return FinalAwaitable(); }
-  void unhandled_exception() noexcept {}
+  void unhandled_exception() noexcept { assert(false); }
 
   void SetContinuation(std::coroutine_handle<> continuation) {
     continuation_ = continuation;
