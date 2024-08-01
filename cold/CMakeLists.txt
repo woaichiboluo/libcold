@@ -29,7 +29,6 @@ Set(ProtoFolder ${CMAKE_SOURCE_DIR}/cold/net/rpc)
 
 if(protobuf_FOUND)
     # generate rpc.proto
-    message("folder:${ProtoFolder}")
     add_custom_command(
     OUTPUT ${ProtoFolder}/rpc.pb.cc ${ProtoFolder}/rpc.pb.hh
     COMMAND protoc
