@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package Cold.Net.Rpc;
+
+enum ErrorCode {
+  NO_ERROR = 0;
+  NO_SERVICE = 1;
+  NO_METHOD = 2;
+  BAD_REQUEST = 3;
+  TIMEOUT = 4;
+}
+
+message RpcMessage {
+  bytes service = 1;
+  bytes method = 2;
+  bytes payload = 3;
+  ErrorCode error = 4;
+}
