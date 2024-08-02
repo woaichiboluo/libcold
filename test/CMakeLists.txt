@@ -51,6 +51,16 @@ set_target_properties(TaskTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/coro")
 add_test(NAME TaskTest COMMAND TaskTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/log)
 
+add_executable(AsyncMutexTest coro/AsyncMutexTest.cpp)
+target_link_libraries(AsyncMutexTest PRIVATE cold)
+set_target_properties(AsyncMutexTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/coro")
+
+add_executable(ConditionVariableTest coro/ConditionVariableTest.cpp)
+target_link_libraries(ConditionVariableTest PRIVATE cold)
+set_target_properties(ConditionVariableTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/coro")
+
 # net
 add_executable(IpAddressTest net/IpAddressTest.cpp)
 target_link_libraries(IpAddressTest PRIVATE cold)
