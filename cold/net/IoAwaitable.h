@@ -1,15 +1,10 @@
 #ifndef COLD_NET_IOAWAITABLE
 #define COLD_NET_IOAWAITABLE
 
-#include <unistd.h>
-
 #include <cerrno>
-#include <chrono>
 
-#include "cold/coro/IoService.h"
-#include "cold/coro/Task.h"
+#include "cold/coro/Io.h"
 #include "cold/net/IpAddress.h"
-#include "cold/time/Timer.h"
 #include "sys/sendfile.h"
 
 #ifdef COLD_NET_ENABLE_SSL
@@ -20,54 +15,8 @@ class SSL;
 
 namespace Cold::Net {
 
-class IoAwaitableBase {
-  template <typename AWAITABLE, typename REP, typename PERIOD>
-  friend class IoTimeoutAwaitable;
-
- public:
-  enum IoType { kREAD, kWRITE };
-  IoAwaitableBase(Base::IoService* service, int fd, IoType type)
-      : service_(service), fd_(fd), type_(type) {}
-
-  virtual ~IoAwaitableBase() = default;
-
-  void await_suspend(std::coroutine_handle<> handle) noexcept {
-    ListenIo(handle);
-  }
-
- protected:
-  void ListenIo(const std::coroutine_handle<>& handle) {
-    if (type_ == kREAD) {
-      service_->ListenReadEvent(fd_, handle);
-    } else {
-      service_->ListenWriteEvent(fd_, handle);
-    }
-  }
-
-  void StopListeningIo() {
-    if (type_ == kREAD) {
-      service_->StopListeningReadEvent(fd_);
-    } else {
-      service_->StopListeningWriteEvent(fd_);
-    }
-  }
-
-  void SetIoType(IoType type) { type_ = type; }
-
-  bool GetTimeout() const { return timeout_; }
-
-  Base::IoService* service_;
-  int fd_;
-
- private:
-  void SetTimeout() {
-    timeout_ = true;
-    StopListeningIo();
-  }
-
-  IoType type_;
-  bool timeout_ = false;
-};
+using Base::IoAwaitableBase;
+using Base::IoTimeoutAwaitable;
 
 class ReadAwaitable : public IoAwaitableBase {
  public:
@@ -335,52 +284,6 @@ class SendFileAwaitable : public IoAwaitableBase {
   size_t count_;
   bool ready_ = false;
   ssize_t retValue_ = 0;
-};
-
-template <typename AWAITABLE, typename REP, typename PERIOD>
-class IoTimeoutAwaitable {
- public:
-  using Duration = std::chrono::duration<REP, PERIOD>;
-  using RetType =
-      std::invoke_result_t<decltype(&AWAITABLE::await_resume), AWAITABLE>;
-
-  IoTimeoutAwaitable(Base::IoService* service, AWAITABLE&& awaitable,
-                     Duration timeoutTime)
-      : service_(service),
-        awaitable_(std::move(awaitable)),
-        timeoutTime_(timeoutTime),
-        timer_(*service) {}
-  ~IoTimeoutAwaitable() = default;
-
-  bool await_ready() noexcept { return false; }
-
-  void await_suspend(std::coroutine_handle<> handle) noexcept {
-    auto task = [](std::coroutine_handle<> coro, RetType& retValue,
-                   AWAITABLE& awaitable) -> Base::Task<> {
-      retValue = co_await awaitable;
-      coro.resume();
-    }(handle, retValue_, awaitable_);
-    timer_.ExpiresAfter(timeoutTime_);
-    timer_.AsyncWait(
-        [](std::coroutine_handle<> coro, AWAITABLE& awaitable) -> Base::Task<> {
-          awaitable.SetTimeout();
-          coro.resume();
-          co_return;
-        }(task.GetHandle(), awaitable_));
-    service_->CoSpawn(std::move(task));
-  }
-
-  RetType await_resume() noexcept {
-    if (!awaitable_.GetTimeout()) timer_.Cancel();
-    return retValue_;
-  }
-
- private:
-  Base::IoService* service_;
-  AWAITABLE awaitable_;
-  Duration timeoutTime_;
-  Base::Timer timer_;
-  RetType retValue_;
 };
 
 #ifdef COLD_NET_ENABLE_SSL
