@@ -30,25 +30,7 @@ class Config {
       const char* p = getenv("COLD_CONFIG_PATH");
       if (p == nullptr) p = "config.json";
       if (!std::filesystem::exists(p)) {
-        config.configJson_ = R"({
-         "logs": {
-           "name": "main-logger",
-           "level": "info",
-           "flush-level": "error"
-         },
-         "http": {
-           "read-timeout-ms": 15000,
-           "sendfile-timeout-ms": 15000,
-           "write-timeout-ms": 15000,
-           "max-url-size": 190000,
-           "max-header-field-size": 1024,
-           "max-header-value-size": 10240,
-           "max-headers-count": 100,
-           "max-body-size": 1048576
-         }
-        })"_json;
         config.configFilePath_ = p;
-        config.SaveConfig();
       } else {
         config.LoadConfig(p);
       }
@@ -75,6 +57,7 @@ class Config {
   template <typename T>
   void SetConfig(const std::string& key, const T& value) {
     configJson_[nlohmann::json::json_pointer(key)] = value;
+    SaveConfig();
   }
 
   nlohmann::json GetConfigJson() const { return configJson_; }
