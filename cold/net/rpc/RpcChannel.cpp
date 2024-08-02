@@ -157,13 +157,11 @@ Base::Task<> Net::Rpc::RpcChannel::DoClientRpc(std::string_view messageStr) {
   RpcMessage rpcMessage;
   if (!rpcMessage.ParseFromString(messageStr)) {
     Base::WARN("Bad response from server,Close the connection");
-    socket_.Close();
     co_return;
   }
   if (rpcMessage.error() != ErrorCode::NO_ERROR) {
     Base::WARN("Request Error. Error Code : {}",
                ErrorCodeToString(rpcMessage.error()));
-    socket_.Close();
     co_return;
   }
   OutstandingCall call = {nullptr, nullptr};
