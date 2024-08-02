@@ -7,6 +7,7 @@
 #include "cold/net/SocketOptions.h"
 #include "cold/net/TcpSocket.h"
 #include "cold/thread/Thread.h"
+#include "cold/util/Config.h"
 
 #ifdef COLD_NET_ENABLE_SSL
 #include "cold/net/ssl/SSLContext.h"
@@ -68,8 +69,8 @@ Base::Task<Net::TcpSocket> Net::Acceptor::Accept() {
 
 #ifdef COLD_NET_ENABLE_SSL
 
-Base::Task<SSL*> DoHandleShake(Base::IoService* service, int& sockfd,
-                               Net::IpAddress addr) {
+Base::Task<SSL*> DoHandshake(Base::IoService* service, int& sockfd,
+                             Net::IpAddress addr) {
   auto ssl = SSL_new(Net::SSLContext::GetInstance().GetContext());
   bool error = false;
   Base::ScopeGuard guard([&]() {
@@ -92,8 +93,10 @@ Base::Task<SSL*> DoHandleShake(Base::IoService* service, int& sockfd,
   SSL_set_accept_state(ssl);
   while (true) {
     auto ret = co_await Net::IoTimeoutAwaitable(
-        service, Net::HandleShakeAwaitable(service, sockfd, ssl),
-        std::chrono::seconds(3));
+        service, Net::HandshakeAwaitable(service, sockfd, ssl),
+        std::chrono::seconds(
+            Base::Config::GetGloablDefaultConfig().GetOrDefault<int>(
+                "ssl/server-handshake-timeout", 10)));
     if (ret == SSL_ERROR_NONE) break;
     if (ret != SSL_ERROR_WANT_READ && ret != SSL_ERROR_WANT_WRITE) {
       error = true;
@@ -110,7 +113,7 @@ Base::Task<Net::TcpSocket> Net::Acceptor::Accept(Base::IoService& service) {
   auto [sockfd, addr] = co_await AcceptAwaitable(ioService_, fd_);
 #ifdef COLD_NET_ENABLE_SSL
   if (enableSSL_) {
-    auto ssl = co_await DoHandleShake(&service, sockfd, addr);
+    auto ssl = co_await DoHandshake(&service, sockfd, addr);
     co_return Net::TcpSocket(service, localAddress_, addr, sockfd, ssl);
   }
 #endif
