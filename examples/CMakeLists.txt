@@ -20,6 +20,13 @@ target_link_libraries(AsioChatRoomClient PRIVATE cold)
 add_executable(ShellColorShow util/ShellColorShow.cpp)
 target_link_libraries(ShellColorShow PRIVATE cold)
 
+# echo
+add_executable(EchoServer simple/echo/EchoServer.cpp)
+target_link_libraries(EchoServer PRIVATE cold)
+
+add_executable(EchoClient simple/echo/EchoClient.cpp)
+target_link_libraries(EchoClient PRIVATE cold)
+
 # http
 add_executable(HttpExample1 http/example1.cpp)
 target_link_libraries(HttpExample1 PRIVATE cold)
