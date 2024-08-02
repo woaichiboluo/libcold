@@ -24,19 +24,18 @@ void Net::Rpc::RpcChannel::CallMethod(
   rpcMessage->set_service(method->service()->full_name());
   rpcMessage->set_method(method->name());
   rpcMessage->set_payload(request->SerializeAsString());
-  socket_.GetIoService().CoSpawn(
-      SendResponse(std::move(rpcMessage), shared_from_this()));
+  socket_->GetIoService().CoSpawn(SendResponse(std::move(rpcMessage)));
   outstandings_.emplace(id_, OutstandingCall{response, done});
 }
 
 Base::Task<> Net::Rpc::RpcChannel::DoRpc() {
   assert(socket_);
-  while (socket_.IsConnected()) {
+  while (socket_->IsConnected()) {
     char buf[65535];
-    auto readBytes = co_await socket_.ReadWithTimeout(buf, sizeof buf,
-                                                      std::chrono::seconds(10));
+    auto readBytes = co_await socket_->ReadWithTimeout(
+        buf, sizeof buf, std::chrono::seconds(10));
     if (readBytes <= 0) {
-      socket_.Close();
+      socket_->Close();
       co_return;
     }
     auto [ok, message] =
@@ -90,7 +89,7 @@ Base::Task<> Net::Rpc::RpcChannel::DoServerRpc(std::string_view messageStr) {
     service->CallMethod(
         methodDesc, nullptr, request.get(), response,
         google::protobuf::NewCallback(this, &RpcChannel::SendResponse, response,
-                                      {shared_from_this(), id_}));
+                                      id_.load()));
 
   } while (0);
   if (error != ErrorCode::NO_ERROR) {
@@ -100,27 +99,24 @@ Base::Task<> Net::Rpc::RpcChannel::DoServerRpc(std::string_view messageStr) {
   }
 }
 
-void Net::Rpc::RpcChannel::SendResponse(
-    google::protobuf::Message* response,
-    std::pair<std::shared_ptr<RpcChannel>, int64_t> selfAndId) {
-  if (!socket_.IsConnected()) return;
+void Net::Rpc::RpcChannel::SendResponse(google::protobuf::Message* response,
+                                        int64_t id) {
+  if (!socket_->IsConnected()) return;
   std::unique_ptr<google::protobuf::Message> guard(response);
   auto message = std::make_unique<RpcMessage>();
-  message->set_id(selfAndId.second);
+  message->set_id(id);
   std::string data;
   if (response->SerializeToString(&data)) {
     message->set_payload(data);
   } else {
     message->set_error(ErrorCode::INTERNAL_SERVER_ERROR);
   }
-  socket_.GetIoService().CoSpawn(
-      SendResponse(std::move(message), shared_from_this()));
+  socket_->GetIoService().CoSpawn(SendResponse(std::move(message)));
 }
 
 Base::Task<> Net::Rpc::RpcChannel::SendResponse(
-    std::unique_ptr<google::protobuf::Message> response,
-    std::shared_ptr<RpcChannel> self) {
-  if (!socket_.IsConnected()) co_return;
+    std::unique_ptr<google::protobuf::Message> response) {
+  if (!socket_->IsConnected()) co_return;
   co_await Send(*response);
 }
 
@@ -128,10 +124,10 @@ Base::Task<> Net::Rpc::RpcChannel::Send(
     const google::protobuf::Message& message) {
   codec_.WriteMessageToBuffer(message);
   auto& buf = codec_.GetBuffer();
-  auto writeBytes = co_await socket_.WriteNWithTimeout(
+  auto writeBytes = co_await socket_->WriteNWithTimeout(
       buf.data(), buf.size(), std::chrono::seconds(10));
   if (writeBytes < 0 || static_cast<size_t>(writeBytes) != buf.size()) {
-    socket_.Close();
+    socket_->Close();
   }
 }
 
@@ -162,7 +158,6 @@ Base::Task<> Net::Rpc::RpcChannel::DoClientRpc(std::string_view messageStr) {
   if (rpcMessage.error() != ErrorCode::NO_ERROR) {
     Base::WARN("Request Error. Error Code : {}",
                ErrorCodeToString(rpcMessage.error()));
-    co_return;
   }
   OutstandingCall call = {nullptr, nullptr};
   {
@@ -172,7 +167,6 @@ Base::Task<> Net::Rpc::RpcChannel::DoClientRpc(std::string_view messageStr) {
       outstandings_.erase(it);
     }
   }
-  std::unique_ptr<google::protobuf::Message> guard(call.response);
   if (call.response) {
     call.response->ParseFromString(rpcMessage.payload());
   }

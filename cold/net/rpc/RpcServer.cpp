@@ -13,6 +13,6 @@ void Net::Rpc::RpcServer::AddService(Service* service) {
 }
 
 Base::Task<> Net::Rpc::RpcServer::DoRpc(Net::TcpSocket socket) {
-  auto channel = std::make_shared<RpcChannel>(std::move(socket), &services_);
-  co_await channel->DoRpc();
+  RpcChannel channel(socket, &services_);
+  co_await channel.DoRpc();
 }
