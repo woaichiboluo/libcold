@@ -4,148 +4,137 @@
 #include <atomic>
 #include <cassert>
 #include <coroutine>
-#include <mutex>
 
 // modify from cppcoro/async_mutex.hpp
 
 namespace Cold::Base {
-
 class AsyncMutex {
  public:
+  friend class AsyncMutexLockOperation;
   class AsyncMutexLockOperation {
-    friend class AsyncMutex;
-
    public:
-    explicit AsyncMutexLockOperation(AsyncMutex& mutex) noexcept
-        : mutex_(mutex) {}
+    AsyncMutexLockOperation(AsyncMutex& mutex) noexcept : mutex_(mutex) {}
+    ~AsyncMutexLockOperation() = default;
 
     bool await_ready() const noexcept { return false; }
+
     bool await_suspend(std::coroutine_handle<> awaiter) noexcept {
       awaiter_ = awaiter;
-
-      std::uintptr_t oldState = mutex_.state_.load(std::memory_order_acquire);
+      auto oldState = mutex_.state_.load(std::memory_order_relaxed);
       while (true) {
         if (oldState == AsyncMutex::kNotLocked) {
-          if (mutex_.state_.compare_exchange_weak(
-                  oldState, AsyncMutex::kLockedNoWaiters,
-                  std::memory_order_acquire, std::memory_order_relaxed)) {
+          if (mutex_.state_.compare_exchange_weak(oldState, kLockedNoWaiters,
+                                                  std::memory_order_acq_rel))
             return false;
-          }
         } else {
-          next_ = reinterpret_cast<AsyncMutexLockOperation*>(oldState);
+          //开始进行头插
+          auto oldHead = reinterpret_cast<AsyncMutexLockOperation*>(oldState);
+          next_ = oldHead;
           if (mutex_.state_.compare_exchange_weak(
                   oldState, reinterpret_cast<std::uintptr_t>(this),
-                  std::memory_order_release, std::memory_order_relaxed)) {
-            // Queued operation to waiters list, suspend now.
+                  std::memory_order_acq_rel))
             return true;
-          }
         }
       }
     }
+
     void await_resume() const noexcept {}
 
-   private:
+   protected:
     AsyncMutex& mutex_;
-    AsyncMutexLockOperation* next_;
-    std::coroutine_handle<> awaiter_;
+
+   private:
+    friend class AsyncMutex;
+    AsyncMutexLockOperation* next_{nullptr};
+    std::coroutine_handle<> awaiter_{nullptr};
   };
 
-  AsyncMutex() noexcept : state_(kNotLocked), waiters_(nullptr) {}
-
-  ~AsyncMutex() {
-    [[maybe_unused]] auto state = state_.load(std::memory_order_relaxed);
-    assert(state == kNotLocked || state == kLockedNoWaiters);
-    assert(waiters_ == nullptr);
-  }
-
-  AsyncMutex(const AsyncMutex&) = delete;
-  AsyncMutex& operator=(const AsyncMutex&) = delete;
-
-  bool TryLock() noexcept {
-    auto oldState = kNotLocked;
-    return state_.compare_exchange_strong(oldState, kLockedNoWaiters,
-                                          std::memory_order_acquire,
-                                          std::memory_order_relaxed);
-  }
-
-  AsyncMutexLockOperation LockAsync() noexcept {
-    return AsyncMutexLockOperation{*this};
-  }
-
-  class AsyncMutexLock {
+  class AsyncMutexGuard {
    public:
-    explicit AsyncMutexLock(AsyncMutex& mutex, std::adopt_lock_t) noexcept
-        : mutex_(&mutex) {}
-
-    AsyncMutexLock(AsyncMutexLock&& other) noexcept : mutex_(other.mutex_) {
-      other.mutex_ = nullptr;
+    explicit AsyncMutexGuard(AsyncMutex& mutex) noexcept : mutex_(&mutex) {}
+    ~AsyncMutexGuard() {
+      if (mutex_) mutex_->Unlock();
     }
 
-    AsyncMutexLock(const AsyncMutexLock& other) = delete;
-    AsyncMutexLock& operator=(const AsyncMutexLock& other) = delete;
+    AsyncMutexGuard(const AsyncMutexGuard&) = delete;
+    AsyncMutexGuard& operator=(const AsyncMutexGuard&) = delete;
 
-    ~AsyncMutexLock() {
-      if (mutex_ != nullptr) {
-        mutex_->Unlock();
-      }
+    AsyncMutexGuard(AsyncMutexGuard&& other) noexcept : mutex_(other.mutex_) {
+      other.mutex_ = nullptr;
     }
 
    private:
     AsyncMutex* mutex_;
   };
 
-  class AsyncMutexScopedLockOperation : public AsyncMutexLockOperation {
+  class AsyncMutexScpoedLockOperation : public AsyncMutexLockOperation {
    public:
-    using AsyncMutexLockOperation::AsyncMutexLockOperation;
+    explicit AsyncMutexScpoedLockOperation(AsyncMutex& mutex) noexcept
+        : AsyncMutexLockOperation(mutex) {}
 
-    [[nodiscard]] AsyncMutexLock await_resume() const noexcept {
-      return AsyncMutexLock(mutex_, std::adopt_lock);
-    }
+    AsyncMutexGuard await_resume() noexcept { return AsyncMutexGuard(mutex_); }
   };
 
-  AsyncMutexScopedLockOperation ScopedLockAsync() noexcept {
-    return AsyncMutexScopedLockOperation(*this);
+  AsyncMutex() noexcept = default;
+  ~AsyncMutex() {
+    assert(state_.load(std::memory_order_relaxed) == kNotLocked);
+    assert(waitersHead_ == nullptr);
+  }
+
+  AsyncMutex(const AsyncMutex&) = delete;
+  AsyncMutex& operator=(const AsyncMutex&) = delete;
+
+  [[nodiscard]] AsyncMutexLockOperation Lock() {
+    return AsyncMutexLockOperation(*this);
+  }
+
+  [[nodiscard]] AsyncMutexScpoedLockOperation ScopedLock() {
+    return AsyncMutexScpoedLockOperation(*this);
+  }
+
+  bool TryLock() {
+    auto expected = kNotLocked;
+    return state_.compare_exchange_strong(expected, kLockedNoWaiters,
+                                          std::memory_order_acquire,
+                                          std::memory_order_relaxed);
   }
 
   void Unlock() {
-    assert(state_.load(std::memory_order_relaxed) != kNotLocked);
-    AsyncMutexLockOperation* waitersHead = waiters_;
-    if (waitersHead == nullptr) {
-      auto oldState = kLockedNoWaiters;
-      const bool releasedLock = state_.compare_exchange_strong(
-          oldState, kNotLocked, std::memory_order_release,
-          std::memory_order_relaxed);
-      if (releasedLock) {
+    auto oldState = state_.load(std::memory_order_relaxed);
+    assert(oldState != kNotLocked);
+    if (waitersHead_ == nullptr) {
+      if (oldState == kLockedNoWaiters &&
+          state_.compare_exchange_strong(oldState, kNotLocked,
+                                         std::memory_order_release,
+                                         std::memory_order_relaxed)) {
         return;
       }
-
+      // there is a linked list of waiters order: FILO
+      // reverse it to FIFO
+      AsyncMutexLockOperation* newHead = nullptr;
       oldState = state_.exchange(kLockedNoWaiters, std::memory_order_acquire);
-      assert(oldState != kLockedNoWaiters && oldState != kNotLocked);
-
-      auto* next = reinterpret_cast<AsyncMutexLockOperation*>(oldState);
-      do {
-        auto* temp = next->next_;
-        next->next_ = waitersHead;
-        waitersHead = next;
-        next = temp;
-      } while (next != nullptr);
+      assert(oldState != kNotLocked && oldState != kLockedNoWaiters);
+      auto cur = reinterpret_cast<AsyncMutexLockOperation*>(oldState);
+      while (cur) {
+        auto temp = cur->next_;
+        cur->next_ = newHead;
+        newHead = cur;
+        cur = temp;
+      }
+      waitersHead_ = newHead;
     }
-
-    assert(waitersHead != nullptr);
-
-    waiters_ = waitersHead->next_;
-
-    waitersHead->awaiter_.resume();
+    assert(waitersHead_);
+    auto head = waitersHead_;
+    waitersHead_ = waitersHead_->next_;
+    head->awaiter_.resume();
   }
 
  private:
   static constexpr std::uintptr_t kNotLocked = 1;
-
   static constexpr std::uintptr_t kLockedNoWaiters = 0;
 
-  std::atomic<std::uintptr_t> state_;
-
-  AsyncMutexLockOperation* waiters_;
+  std::atomic<std::uintptr_t> state_{kNotLocked};
+  AsyncMutexLockOperation* waitersHead_{nullptr};
 };
 
 }  // namespace Cold::Base
