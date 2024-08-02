@@ -157,6 +157,7 @@ inline const char* HttpStatusToHttpStatusMsg(HttpStatus status) {
 #undef XX
   }
   assert(0);
+  return "";
 }
 
 inline std::string UrlEncode(std::string_view url) {

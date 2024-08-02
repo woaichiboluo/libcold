@@ -240,8 +240,10 @@ class ConnectAwaitable : public IoAwaitableBase {
       socklen_t len = sizeof(struct sockaddr_in6);
       getsockname(fd_, localAddress_->GetSockaddr(), &len);
       *remoteAddress_ = ipAddress_;
+    } else {
+      errno = retValue_;
+      retValue_ = -1;
     }
-    errno = retValue_;
     return retValue_;
   }
 
@@ -288,11 +290,11 @@ class SendFileAwaitable : public IoAwaitableBase {
 
 #ifdef COLD_NET_ENABLE_SSL
 
-class HandleShakeAwaitable : public IoAwaitableBase {
+class HandshakeAwaitable : public IoAwaitableBase {
  public:
-  HandleShakeAwaitable(Base::IoService* service, int fd, SSL* ssl)
+  HandshakeAwaitable(Base::IoService* service, int fd, SSL* ssl)
       : IoAwaitableBase(service, fd, IoType::kREAD), ssl_(ssl) {}
-  ~HandleShakeAwaitable() override = default;
+  ~HandshakeAwaitable() override = default;
 
   bool GetTimeout() const { return timeout_; }
 

@@ -26,6 +26,7 @@ class BasicSocket {
       : ioService_(&service), fd_(fd) {
 #ifdef COLD_NET_ENABLE_SSL
     if (enableSSL) {
+      enableSSL_ = true;
       ssl_ = SSL_new(SSLContext::GetInstance().GetContext());
       if (!ssl_) {
         Base::ERROR("SSL_new failed");
@@ -120,6 +121,8 @@ class BasicSocket {
     return IoTimeoutAwaitable(ioService_, Connect(remoteAddress), duration);
   }
 
+  bool IsEnableSSL() const { return enableSSL_; }
+
  protected:
   Base::IoService* ioService_;
   int fd_ = -1;
@@ -131,6 +134,7 @@ class BasicSocket {
   */
   std::atomic<bool> connected_ = false;
   SSL* ssl_ = nullptr;
+  bool enableSSL_ = false;
 };
 
 }  // namespace Cold::Net
