@@ -13,14 +13,7 @@ class TcpServer {
   TcpServer(const Net::IpAddress& addr, size_t poolSize = 0,
             bool reusePort = false, bool enableSSL = false)
       : pool_(poolSize),
-        acceptor_(pool_.GetMainIoService(), addr, reusePort, enableSSL) {
-    whenConnected_ = [](Net::TcpSocket sock) -> Base::Task<> {
-      Base::INFO("TcpServer: Connection accepted but no handler set. addr: {}",
-                 sock.GetRemoteAddress().GetIpPort());
-      sock.ShutDown();
-      co_return;
-    };
-  }
+        acceptor_(pool_.GetMainIoService(), addr, reusePort, enableSSL) {}
 
   virtual ~TcpServer() = default;
 
@@ -44,22 +37,21 @@ class TcpServer {
     while (true) {
       auto socket = co_await acceptor_.Accept();
       if (socket) {
-        socket.GetIoService().CoSpawn(whenConnected_(std::move(socket)));
+        socket.GetIoService().CoSpawn(OnConnect(std::move(socket)));
       }
     }
   }
 
-  void SetWhenConnected(
-      std::function<Base::Task<>(Net::TcpSocket)> whenConnected) {
-    whenConnected_ = whenConnected;
+  virtual Base::Task<> OnConnect(Net::TcpSocket socket) {
+    Base::INFO("TcpServer: Connection accepted. addr: {}",
+               socket.GetRemoteAddress().GetIpPort());
+    co_return;
   }
 
  private:
   Base::IoServicePool pool_;
   Net::Acceptor acceptor_;
   bool started_ = false;
-
-  std::function<Base::Task<>(Net::TcpSocket)> whenConnected_;
 };
 
 }  // namespace Cold::Net

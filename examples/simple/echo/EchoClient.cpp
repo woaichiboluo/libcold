@@ -1,24 +1,14 @@
 #include "cold/coro/Io.h"
-#include "cold/coro/IoService.h"
-#include "cold/net/IpAddress.h"
-#include "cold/net/TcpSocket.h"
+#include "cold/net/TcpClient.h"
 
 using namespace Cold;
 
-class EchoClient {
+class EchoClient : public Net::TcpClient {
  public:
-  EchoClient(Base::IoService& service) : socket_(service) {}
+  EchoClient(Base::IoService& service) : TcpClient(service) {}
   ~EchoClient() = default;
-  EchoClient(const EchoClient&) = delete;
-  EchoClient& operator=(const EchoClient&) = delete;
 
-  Base::Task<> Connect(const Net::IpAddress& addr) {
-    auto ret = co_await socket_.Connect(addr);
-    if (ret < 0) {
-      Base::ERROR("Connect failed");
-      socket_.GetIoService().Stop();
-      co_return;
-    }
+  Base::Task<> OnConnect() override {
     Base::INFO("Connect Success. Server address:{}",
                socket_.GetRemoteAddress().GetIpPort());
     Base::AsyncIO io(socket_.GetIoService(), STDIN_FILENO);
@@ -38,9 +28,6 @@ class EchoClient {
     socket_.Close();
     socket_.GetIoService().Stop();
   }
-
- private:
-  Net::TcpSocket socket_;
 };
 
 int main() {

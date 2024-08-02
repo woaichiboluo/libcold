@@ -11,8 +11,6 @@ class HttpServer : public TcpServer {
   HttpServer(const Net::IpAddress& addr, size_t poolSize = 0,
              bool reusePort = false, bool enableSSL = false)
       : TcpServer(addr, poolSize, reusePort, enableSSL) {
-    SetWhenConnected(
-        std::bind(&HttpServer::DoHttp, this, std::placeholders::_1));
     defaultErrorPageHandler_ = [](HttpResponse& response) {
       auto body = std::make_unique<TextBody>();
       auto status = static_cast<int>(response.GetStatus());
@@ -30,6 +28,10 @@ class HttpServer : public TcpServer {
 
   HttpServer(const HttpServer&) = delete;
   HttpServer& operator=(const HttpServer&) = delete;
+
+  Base::Task<> OnConnect(Net::TcpSocket socket) override {
+    co_await DoHttp(std::move(socket));
+  }
 
   void SetHost(std::string host) { context_.host_ = host; }
 

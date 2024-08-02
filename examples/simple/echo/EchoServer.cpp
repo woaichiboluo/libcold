@@ -9,11 +9,12 @@ class EchoServer : public Net::TcpServer {
  public:
   EchoServer(const Net::IpAddress& addr, size_t poolSize = 0,
              bool reusePort = false, bool enableSSL = false)
-      : Net::TcpServer(addr, poolSize, reusePort, enableSSL) {
-    SetWhenConnected(
-        std::bind(&EchoServer::DoEcho, this, std::placeholders::_1));
-  }
+      : Net::TcpServer(addr, poolSize, reusePort, enableSSL) {}
   ~EchoServer() override = default;
+
+  Base::Task<> OnConnect(Net::TcpSocket socket) override {
+    co_await DoEcho(std::move(socket));
+  }
 
   Base::Task<> DoEcho(Net::TcpSocket socket) {
     auto timeout = std::chrono::seconds(10);

@@ -16,14 +16,16 @@ class RpcServer : public TcpServer {
  public:
   RpcServer(const Net::IpAddress& addr, size_t poolSize = 0,
             bool reusePort = false, bool enableSSL = false)
-      : TcpServer(addr, poolSize, reusePort, enableSSL) {
-    SetWhenConnected(std::bind(&RpcServer::DoRpc, this, std::placeholders::_1));
-  }
+      : TcpServer(addr, poolSize, reusePort, enableSSL) {}
 
   ~RpcServer() override = default;
 
   RpcServer(RpcServer const&) = delete;
   RpcServer& operator=(RpcServer const&) = delete;
+
+  Base::Task<> OnConnect(Net::TcpSocket socket) override {
+    co_await DoRpc(std::move(socket));
+  }
 
   void AddService(Service* service);
   Base::Task<> DoRpc(Net::TcpSocket socket);
