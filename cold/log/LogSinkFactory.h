@@ -26,7 +26,8 @@ class LogSinkFactory {
   LogSinkFactory& operator=(const LogSinkFactory&) = delete;
 
   static LogSinkPtr MakeSink(const std::string& type,
-                             const std::string& pattern, const ArgList& args) {
+                             const std::string& pattern = "",
+                             const ArgList& args = {}) {
     auto& facotry = Instance();
     assert(facotry.maker_.contains(type));
     auto ret = facotry.maker_[type](args);

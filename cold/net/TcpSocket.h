@@ -83,7 +83,6 @@ class TcpSocket : public Net::BasicSocket {
 
 #ifdef COLD_NET_ENABLE_SSL
   [[nodiscard]] Base::Task<bool> DoHandshake() {
-    Base::INFO("ssl_:{}", reinterpret_cast<uintptr_t>(ssl_));
     assert(ssl_);
     SSL_set_connect_state(ssl_);
     while (true) {
@@ -91,7 +90,7 @@ class TcpSocket : public Net::BasicSocket {
           ioService_, Net::HandshakeAwaitable(ioService_, fd_, ssl_),
           std::chrono::seconds(
               Base::Config::GetGloablDefaultConfig().GetOrDefault<int>(
-                  "ssl/client-handshake-timeout", 5)));
+                  "/ssl/client-handshake-timeout", 5)));
       if (ret == SSL_ERROR_NONE) break;
       if (ret != SSL_ERROR_WANT_READ && ret != SSL_ERROR_WANT_WRITE) {
         co_return false;

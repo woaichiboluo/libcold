@@ -6,7 +6,7 @@ using namespace Cold;
 class EchoClient : public Net::TcpClient {
  public:
   EchoClient(Base::IoService& service) : TcpClient(service) {}
-  ~EchoClient() = default;
+  ~EchoClient() override = default;
 
   Base::Task<> OnConnect() override {
     Base::INFO("Connect Success. Server address:{}",

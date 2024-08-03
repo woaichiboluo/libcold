@@ -96,7 +96,7 @@ Base::Task<SSL*> DoHandshake(Base::IoService* service, int& sockfd,
         service, Net::HandshakeAwaitable(service, sockfd, ssl),
         std::chrono::seconds(
             Base::Config::GetGloablDefaultConfig().GetOrDefault<int>(
-                "ssl/server-handshake-timeout", 10)));
+                "/ssl/server-handshake-timeout", 10)));
     if (ret == SSL_ERROR_NONE) break;
     if (ret != SSL_ERROR_WANT_READ && ret != SSL_ERROR_WANT_WRITE) {
       error = true;
