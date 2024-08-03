@@ -15,7 +15,8 @@ void TestOneLoggerMultiSinks() {
   auto basicFileSink = Base::LogSinkFactory::MakeSink<Base::BasicFileSink>(
       "LogSinkTest_OneLoggerMultiSinks.log");
   auto stdoutSink = Base::LogSinkFactory::MakeSink<Base::StdoutSink>();
-  auto stdoutColorSink = std::make_shared<Base::StdoutColorSink>();
+  auto stdoutColorSink =
+      Base::LogSinkFactory::MakeSink<Base::StdoutColorSink>();
 
   auto logger = std::make_shared<Base::Logger>(
       "LogSinkTest", std::initializer_list<Base::SinkPtr>{
@@ -26,7 +27,7 @@ void TestOneLoggerMultiSinks() {
 }
 
 void TestOneSinkMultiLoggers() {
-  auto sink = std::make_shared<Base::BasicFileSink>(
+  auto sink = Base::LogSinkFactory::MakeSink<Base::BasicFileSink>(
       "LogSinkTest_OneSinkMultiLoggers.log");
   auto formatter =
       std::make_unique<Base::LogFormatter>("%T %L <%N:%t> %m %c [%b: %l] %n");
@@ -64,9 +65,9 @@ void TestOneSinkMultiLoggers() {
 
 void TestMultiSinksMultiLoggers() {
   // auto formatter = Base::MakeFormatter("%T %L <%N:%t> %m %c [%b: %l] %n");
-  auto sink1 = std::make_shared<Base::BasicFileSink>(
+  auto sink1 = Base::LogSinkFactory::MakeSink<Base::BasicFileSink>(
       "LogSinkTest_TestMultiSinksMultiLoggers_1.log");
-  auto sink2 = std::make_shared<Base::BasicFileSink>(
+  auto sink2 = Base::LogSinkFactory::MakeSink<Base::BasicFileSink>(
       "LogSinkTest_TestMultiSinksMultiLoggers_2.log");
   auto sink3 = Base::LogSinkFactory::MakeSink<Base::StdoutSink>();
   auto sink4 = Base::LogSinkFactory::MakeSink<Base::StdoutColorSink>();
