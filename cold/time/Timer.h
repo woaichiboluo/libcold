@@ -127,6 +127,38 @@ Timer::TimerAwaitable<T> Timer::AsyncWaitable(Task<T> task) {
   return TimerAwaitable(*this, std::move(task));
 }
 
+template <typename REP, typename PERIOD>
+class SleepAwaitable {
+ public:
+  SleepAwaitable(Base::IoService& service,
+                 std::chrono::duration<REP, PERIOD> duration)
+      : service_(&service), duration_(duration), timer_(service) {}
+  ~SleepAwaitable() = default;
+
+  bool await_ready() noexcept { return false; }
+
+  void await_suspend(std::coroutine_handle<> handle) noexcept {
+    timer_.ExpiresAfter(duration_);
+    timer_.AsyncWait([](std::coroutine_handle<> h) -> Base::Task<> {
+      h.resume();
+      co_return;
+    }(handle));
+  }
+
+  void await_resume() noexcept {}
+
+ private:
+  Base::IoService* service_ = nullptr;
+  std::chrono::duration<REP, PERIOD> duration_;
+  Timer timer_;
+};
+
+template <typename REP, typename PERIOD>
+[[nodiscard]] auto Sleep(Base::IoService& service,
+                         std::chrono::duration<REP, PERIOD> duration) {
+  return SleepAwaitable(service, duration);
+}
+
 }  // namespace Cold::Base
 
 #endif /* COLD_TIME_TIMER */
