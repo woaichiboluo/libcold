@@ -26,13 +26,11 @@ class RpcClient : public Net::TcpClient {
         stub_(&channel_) {}
   ~RpcClient() override = default;
 
-  template <typename ResponseType>
   class StubCallAwaitable {
    public:
     using Call = std::function<void(google::protobuf::Closure* done)>;
-    StubCallAwaitable(Base::IoService* service, Call call,
-                      ResponseType* response)
-        : service_(service), call_(std::move(call)), response_(response) {}
+    StubCallAwaitable(Base::IoService* service, Call call)
+        : service_(service), call_(std::move(call)) {}
 
     bool await_ready() const noexcept { return false; }
 
@@ -48,12 +46,11 @@ class RpcClient : public Net::TcpClient {
       }(handle));
     }
 
-    ResponseType* await_resume() noexcept { return response_; }
+    void await_resume() noexcept {}
 
    private:
     Base::IoService* service_;
     Call call_;
-    ResponseType* response_;
   };
 
  protected:
@@ -68,8 +65,7 @@ class RpcClient : public Net::TcpClient {
          response](google::protobuf::Closure* done) {
           (stub_.*method)(controller, request, response, done);
         };
-    return StubCallAwaitable<ResponseType>(&socket_.GetIoService(),
-                                           std::move(call), response);
+    return StubCallAwaitable(&socket_.GetIoService(), std::move(call));
   }
 
  protected:

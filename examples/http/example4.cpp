@@ -13,8 +13,6 @@ int main(int argc, char** argv) {
   Net::IpAddress addr(8080);
   Net::SSLContext::GetInstance().LoadCert(argv[1], argv[2]);
   HttpServer server(addr, 4, false, true);
-  //   auto servlet = std::make_unique<StaticFileServlet>(".");
-  //   server.SetDefaultServlet(std::move(servlet));
   Base::INFO("example4:basic https usage. Run at port: 8080");
   server.Start();
 }
