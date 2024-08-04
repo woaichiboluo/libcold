@@ -18,6 +18,38 @@ namespace Cold::Net {
 using Base::IoAwaitableBase;
 using Base::IoTimeoutAwaitable;
 
+#ifdef COLD_NET_ENABLE_SSL
+class SSLReadAwaitable : public IoAwaitableBase {
+ public:
+  SSLReadAwaitable(Base::IoService* service, SSL* ssl, void* buf, size_t count,
+                   const std::atomic<bool>& connected)
+      : IoAwaitableBase(service, SSL_get_fd(ssl), IoAwaitableBase::kREAD),
+        ssl_(ssl),
+        buf_(buf),
+        count_(count),
+        connected_(connected) {}
+
+  ~SSLReadAwaitable() override = default;
+
+  bool await_ready() noexcept { return false; }
+
+  ssize_t await_resume() noexcept {
+    if (!connected_ || GetTimeout()) {
+      errno = GetTimeout() ? ETIMEDOUT : ENOTCONN;
+      return -1;
+    }
+    auto n = SSL_read(ssl_, buf_, static_cast<int>(count_));
+    return n;
+  }
+
+ private:
+  SSL* ssl_;
+  void* buf_;
+  size_t count_;
+  const std::atomic<bool>& connected_;
+};
+#endif
+
 class ReadAwaitable : public IoAwaitableBase {
  public:
   ReadAwaitable(Base::IoService* service, int fd, void* buf, size_t count,
@@ -26,26 +58,48 @@ class ReadAwaitable : public IoAwaitableBase {
         buf_(buf),
         count_(count),
         connected_(connected),
-        ssl_(ssl) {
+        ssl_(ssl),
+        states_(std::make_shared<std::pair<ssize_t, bool>>(0, false)) {
     (void)ssl_;
   }
   ~ReadAwaitable() override = default;
 
   bool await_ready() noexcept { return !connected_; }
 
+  void await_suspend(std::coroutine_handle<> handle) noexcept {
+    if (!ssl_) {
+      IoAwaitableBase::await_suspend(handle);
+    } else {
+#ifdef COLD_NET_ENABLE_SSL
+      service_->CoSpawn(
+          [](std::coroutine_handle<> h, Base::IoService* service, SSL* ssl,
+             void* buf, size_t count, const std::atomic<bool>& connected,
+             std::shared_ptr<std::pair<ssize_t, bool>> states) -> Base::Task<> {
+            while (!states->second) {
+              states->first = co_await SSLReadAwaitable(service, ssl, buf,
+                                                        count, connected);
+              if (states->first == -1 &&
+                  SSL_get_error(ssl, static_cast<int>(states->first)) ==
+                      SSL_ERROR_WANT_READ) {
+                states->first = 0;
+                continue;
+              }
+              break;
+            }
+            if (!states->second) h.resume();
+          }(handle, service_, ssl_, buf_, count_, connected_, states_));
+#endif
+    }
+  }
+
   ssize_t await_resume() noexcept {
+    states_->second = true;
     if (!connected_ || GetTimeout()) {
       errno = GetTimeout() ? ETIMEDOUT : ENOTCONN;
       return -1;
     }
-#ifdef COLD_NET_ENABLE_SSL
-    if (ssl_) {
-      auto n = SSL_read(ssl_, buf_, static_cast<int>(count_));
-      return n;
-    }
-#endif
-    auto n = read(fd_, buf_, count_);
-    return n;
+    if (!ssl_) states_->first = read(fd_, buf_, count_);
+    return states_->first;
   }
 
  private:
@@ -53,6 +107,8 @@ class ReadAwaitable : public IoAwaitableBase {
   size_t count_;
   const std::atomic<bool>& connected_;
   SSL* ssl_;
+  // first retValue second alreadyResume
+  std::shared_ptr<std::pair<ssize_t, bool>> states_;
 };
 
 class WriteAwaitable : public IoAwaitableBase {
