@@ -48,8 +48,9 @@ class TcpServer {
     co_return;
   }
 
- private:
   Base::IoServicePool pool_;
+
+ private:
   Net::Acceptor acceptor_;
   bool started_ = false;
 };

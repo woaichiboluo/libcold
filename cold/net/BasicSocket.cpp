@@ -79,4 +79,9 @@ void Net::BasicSocket::ShutDown() {
   shutdown(fd_, SHUT_WR);
 }
 
-void Net::BasicSocket::Close() { shutdown(fd_, SHUT_RDWR); }
+void Net::BasicSocket::Close() {
+#ifdef COLD_NET_ENABLE_SSL
+  if (ssl_) SSL_shutdown(ssl_);
+#endif
+  shutdown(fd_, SHUT_RDWR);
+}
