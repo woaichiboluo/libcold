@@ -3,9 +3,6 @@
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
 
-#include <cassert>
-#include <chrono>
-
 #include "cold/net/TcpSocket.h"
 #include "cold/net/rpc/RpcServer.h"
 #include "cold/net/rpc/rpc.pb.h"
@@ -89,7 +86,7 @@ Base::Task<> Net::Rpc::RpcChannel::DoServerRpc(std::string_view messageStr) {
     service->CallMethod(
         methodDesc, nullptr, request.get(), response,
         google::protobuf::NewCallback(this, &RpcChannel::SendResponse, response,
-                                      id_.load()));
+                                      rpcMessage.id()));
 
   } while (0);
   if (error != ErrorCode::NO_ERROR) {
@@ -123,7 +120,7 @@ Base::Task<> Net::Rpc::RpcChannel::SendResponse(
 Base::Task<> Net::Rpc::RpcChannel::Send(
     const google::protobuf::Message& message) {
   codec_.WriteMessageToBuffer(message);
-  auto& buf = codec_.GetBuffer();
+  auto& buf = codec_.GetWriteBuffer();
   auto writeBytes = co_await socket_->WriteNWithTimeout(
       buf.data(), buf.size(), std::chrono::seconds(10));
   if (writeBytes < 0 || static_cast<size_t>(writeBytes) != buf.size()) {

@@ -33,38 +33,43 @@ class RpcCodec {
   RpcCodec& operator=(RpcCodec const&) = delete;
 
   std::pair<bool, std::string_view> ParseMessage(const char* buf, size_t len) {
-    buf_.insert(buf_.end(), buf, buf + len);
+    readBuf_.insert(readBuf_.end(), buf, buf + len);
     uint64_t messageSize = 0;
-    if (buf_.size() < sizeof(messageSize)) return {false, {}};
-    memcpy(&messageSize, buf_.data(), sizeof(messageSize));
+    if (readBuf_.size() < sizeof(messageSize)) return {false, {}};
+    memcpy(&messageSize, readBuf_.data(), sizeof(messageSize));
     messageSize = Net::Network64ToHost64(messageSize);
-    if (buf_.size() < messageSize + sizeof(messageSize)) return {false, {}};
-    return {true,
-            std::string_view{buf_.data() + sizeof(messageSize), messageSize}};
+    if (readBuf_.size() < messageSize + sizeof(messageSize)) return {false, {}};
+    return {true, std::string_view{readBuf_.data() + sizeof(messageSize),
+                                   messageSize}};
   }
 
   void TakeMessage(std::string_view message) {
-    assert(buf_.size() >= message.size());
+    assert(readBuf_.size() >= message.size());
     auto size = message.size() + sizeof(uint64_t);
-    buf_.erase(buf_.begin(), buf_.begin() + static_cast<long>(size));
+    readBuf_.erase(readBuf_.begin(),
+                   readBuf_.begin() + static_cast<long>(size));
   }
 
   bool WriteMessageToBuffer(const google::protobuf::Message& message) {
-    buf_.clear();
+    writeBuf_.clear();
     uint64_t size = message.ByteSizeLong();
-    buf_.resize(size + sizeof(size));
+    writeBuf_.resize(size + sizeof(size));
     size = Net::Host64ToNetwork64(size);
     const char* begin = reinterpret_cast<const char*>(&size);
-    memcpy(buf_.data(), begin, sizeof(size));
+    memcpy(writeBuf_.data(), begin, sizeof(size));
     return message.SerializePartialToArray(
-        buf_.data() + sizeof(size), static_cast<int>(message.ByteSizeLong()));
+        writeBuf_.data() + sizeof(size),
+        static_cast<int>(message.ByteSizeLong()));
   }
 
-  const std::vector<char>& GetBuffer() const { return buf_; }
-  std::vector<char>& GetMutableBuffer() { return buf_; }
+  const std::vector<char>& GetReadBuffer() const { return readBuf_; }
+  const std::vector<char>& GetWriteBuffer() const { return writeBuf_; }
+  std::vector<char>& GetMutableReadBuffer() { return readBuf_; }
+  std::vector<char>& GetMutableWriteBuffer() { return writeBuf_; }
 
  private:
-  std::vector<char> buf_;
+  std::vector<char> readBuf_;
+  std::vector<char> writeBuf_;
 };
 
 }  // namespace Cold::Net::Rpc
