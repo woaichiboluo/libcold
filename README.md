@@ -1,4 +1,6 @@
-# libcold C++20实现的协程网络库   
+# libcold C++20实现的协程网络库 
+
+libcold是基于C++20协程实现的一套无栈对称协程网络库。  
 
 ## 构建   
 ```shell
@@ -8,7 +10,8 @@ mkdir build
 cd build 
 cmake .. # cmake .. -DCMAKE_BUILD_TYPE=release
 make -j8
-```  
+```   
+
 
 ## 配置模块  
 配置模块通过json实现，使用json-pointer来完成对嵌套json进行查询与设置。   
@@ -74,7 +77,48 @@ int main() {
 ``` 
 
 ## 定时器模块  
+定时器模块使用的是小根堆进行实现，同时支持异步等待，以及协程化同步等待。
+```c++
+#include "cold/coro/IoService.h"
+#include "cold/log/Logger.h"
+#include "cold/time/Timer.h"
 
+using namespace Cold;
+
+// 使用AsyncWait异步等待
+Base::Task<> Repeated(Base::IoService& service, int& count,
+                      Base::Timer& timer) {
+  if (count == 5) {
+    service.Stop();
+  } else {
+    Base::INFO("count:{}", count);
+    count++;
+    timer.ExpiresAfter(std::chrono::seconds(1));
+    timer.AsyncWait(Repeated(service, count, timer));
+  }
+  co_return;
+}
+
+// use co_await 同步等待
+Base::Task<int> GetValue() { co_return 888; }
+
+Base::Task<> CoAwaitTimer(Base::IoService& service) {
+  Base::Timer timer(service);
+  timer.ExpiresAfter(std::chrono::seconds(1));
+  auto value = co_await timer.AsyncWaitable(GetValue());
+  Base::INFO("fetch value: {}", value);
+}
+
+int main() {
+  Base::IoService service;
+  Base::Timer timer(service);
+  int c = 0;
+  timer.ExpiresAfter(std::chrono::seconds(1));
+  timer.AsyncWait(Repeated(service, c, timer));
+  service.CoSpawn(CoAwaitTimer(service));
+  service.Start();
+}
+```
 
 ## 网络模块   
 libcold对Socket进行了封装，对标准IO进行了协程化，在编写Socket应用时，可以用同步编程实现异步编程一样的效果。 
@@ -215,7 +259,7 @@ int main(int argc, char** argv) {
 }
 ```  
 也可以和经典的JavaWeb一样,利用Session来实现登录等操作。  
-详细见 [http/example3](./examples/http/example3.cpp)  
+详细见 [http/example2](./examples/http/example2.cpp)  
 
 ## RPC模块  
 基于Protobuf实现了RPC模块， 
@@ -300,3 +344,98 @@ int main() {
 }
 ```  
 ## SSL模块  
+SSL的是否启用，已经被封装在TcpServer以及TcpClient中，通过构造函数中的enableSSL来选择是否开启。   
+对于TcpServer而言，加载证书，设置enableSSL即可。   
+如以下的DaytimeServer  
+```c++
+#include <ctime>
+
+#include "cold/net/TcpServer.h"
+#include "cold/net/ssl/SSLContext.h"
+
+using namespace Cold;
+
+class DaytimeServer : public Net::TcpServer {
+ public:
+  DaytimeServer(const Net::IpAddress& addr, size_t poolSize = 0,
+                bool reusePort = false, bool enableSSL = false)
+      : Net::TcpServer(addr, poolSize, reusePort, enableSSL) {}
+  ~DaytimeServer() override = default;
+
+  Base::Task<> OnConnect(Net::TcpSocket socket) override {
+    Base::INFO("DayTimeServer: Connection accepted. addr: {}",
+               socket.GetRemoteAddress().GetIpPort());
+    time_t now = time(nullptr);
+    std::string timeStr(ctime(&now));
+    co_await socket.WriteN(timeStr.data(), timeStr.size());
+    socket.Close();
+  }
+};
+
+int main(int argc, char** argv) {
+  // load the server's private key and certificate
+  if (argc < 3) {
+    fmt::print("Usage: {} <cert> <key>\n", argv[0]);
+    return 0;
+  }
+  Net::SSLContext::GetInstance().LoadCert(argv[1], argv[2]);
+  DaytimeServer server(Net::IpAddress(6666), 0, false, true);
+  server.Start();
+}
+```
+对于TcpClient则更加简单，设置enableSSL过后，就可以像正常使用Socket一样进行使用。   
+```c++
+#include "cold/coro/IoService.h"
+#include "cold/net/TcpClient.h"
+#include "cold/time/Timer.h"
+
+using namespace Cold;
+
+class DaytimeClient : public Net::TcpClient {
+ public:
+  DaytimeClient(Base::IoService& service, bool enableSSL)
+      : Net::TcpClient(service, enableSSL) {}
+  ~DaytimeClient() override = default;
+
+  Base::Task<> OnConnect() override {
+    Base::INFO("Connect Success. Server address:{}",
+               GetSocket().GetRemoteAddress().GetIpPort());
+    char buf[256];
+    auto readBytes = co_await socket_.Read(buf, sizeof buf);
+    if (readBytes <= 0) {
+      Base::ERROR("Read failed. ret: {},reason: {}", readBytes,
+                  Base::ThisThread::ErrorMsg());
+    } else {
+      Base::INFO("Server time: {}",
+                 std::string(buf, static_cast<size_t>(readBytes)));
+    }
+    socket_.Close();
+    socket_.GetIoService().Stop();
+  }
+};
+
+int main() {
+  Base::IoService service;
+  DaytimeClient client(service, true);
+  service.CoSpawn(client.Connect(Net::IpAddress(6666)));
+  service.Start();
+}
+```
+
+## 用到的第三方库  
+
+* [fmt](https://github.com/fmtlib/fmt.git) 用于格式化输出
+* [llhttp](https://github.com/nodejs/llhttp.git) 用于解析HTTP报文
+* [boost uuid](https://github.com/boostorg/uuid.git) 用于生成SessionID  
+* [nlohmann json](https://github.com/nlohmann/json.git)  用于json解析   
+* [doctest](https://github.com/doctest/doctest.git) 用于测试编写
+* [protobuf](https://github.com/protocolbuffers/protobuf.git) 用于RPC模块实现
+* [OpenSSL](https://github.com/openssl/openssl.git) 用于SSL模块实现
+
+
+## 主要实现参考   
+* [muduo](https://github.com/chenshuo/muduo.git)   
+* [sylar](https://github.com/sylar-yin/sylar.git)  
+* [cppcoro](https://github.com/lewissbaker/cppcoro.git)  
+* [handy](https://github.com/yedf2/handy.git)  
+* [spdlog](https://github.com/gabime/spdlog.git)
