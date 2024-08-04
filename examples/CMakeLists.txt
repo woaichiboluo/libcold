@@ -4,6 +4,17 @@ set(simplehttpsource
   simple/simplehttp/HttpResponse.cpp
 )
 
+# simple/echo
+add_executable(EchoServer simple/echo/EchoServer.cpp)
+target_link_libraries(EchoServer PRIVATE cold)
+
+add_executable(EchoClient simple/echo/EchoClient.cpp)
+target_link_libraries(EchoClient PRIVATE cold)
+
+# simple/chargen
+add_executable(ChargenServer simple/chargen/ChargenServer.cpp)
+target_link_libraries(ChargenServer PRIVATE cold)
+
 add_executable(RequestParserTest ${simplehttpsource} simple/simplehttp/RequestParserTest.cpp)
 target_link_libraries(RequestParserTest PRIVATE cold)
 
@@ -20,12 +31,6 @@ target_link_libraries(AsioChatRoomClient PRIVATE cold)
 add_executable(ShellColorShow util/ShellColorShow.cpp)
 target_link_libraries(ShellColorShow PRIVATE cold)
 
-# echo
-add_executable(EchoServer simple/echo/EchoServer.cpp)
-target_link_libraries(EchoServer PRIVATE cold)
-
-add_executable(EchoClient simple/echo/EchoClient.cpp)
-target_link_libraries(EchoClient PRIVATE cold)
 
 # http
 add_executable(HttpExample1 http/example1.cpp)
@@ -37,9 +42,18 @@ target_link_libraries(HttpExample2 PRIVATE cold)
 add_executable(HttpExample3 http/example3.cpp)
 target_link_libraries(HttpExample3 PRIVATE cold)
 
+
+# ssl
 if(${BUILD_SSL_MODE})
-  add_executable(HttpExample4 http/example4.cpp)
-  target_link_libraries(HttpExample4 PRIVATE cold)
+# https
+  add_executable(HttpsServer ssl/HttpsServer.cpp)
+  target_link_libraries(HttpsServer PRIVATE cold)
+  # daytime
+  add_executable(DaytimeServer ssl/daytime/DaytimeServer.cpp)
+  target_link_libraries(DaytimeServer PRIVATE cold)
+
+  add_executable(DaytimeClient ssl/daytime/DaytimeClient.cpp)
+  target_link_libraries(DaytimeClient PRIVATE cold)
 endif()
 
 if(${BUILD_PROTOBUF_MODE})
