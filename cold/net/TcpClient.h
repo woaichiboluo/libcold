@@ -19,7 +19,6 @@ class TcpClient {
   TcpClient& operator=(TcpClient&&) = default;
 
   Base::Task<> Connect(IpAddress addr) {
-    Base::INFO("Connect to server: {}", addr.GetIpPort());
     auto ret = co_await socket_.Connect(addr);
     if (ret < 0) {
       co_await OnConnectFailed();
