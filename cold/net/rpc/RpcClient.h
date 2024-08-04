@@ -5,11 +5,10 @@
 #include <google/protobuf/stubs/callback.h>
 
 #include <concepts>
-#include <coroutine>
-#include <type_traits>
 
 #include "cold/coro/IoService.h"
 #include "cold/net/TcpClient.h"
+#include "cold/net/TcpSocket.h"
 #include "cold/net/rpc/RpcChannel.h"
 
 namespace Cold::Net::Rpc {
@@ -29,10 +28,10 @@ class RpcClient : public Net::TcpClient {
   class StubCallAwaitable {
    public:
     using Call = std::function<void(google::protobuf::Closure* done)>;
-    StubCallAwaitable(Base::IoService* service, Call call)
-        : service_(service), call_(std::move(call)) {}
+    StubCallAwaitable(TcpSocket* socket, Call call)
+        : socket_(socket), call_(std::move(call)) {}
 
-    bool await_ready() const noexcept { return false; }
+    bool await_ready() const noexcept { return !socket_->IsConnected(); }
 
     void await_suspend(std::coroutine_handle<> handle) noexcept {
       call_(google::protobuf::NewCallback(
@@ -40,32 +39,50 @@ class RpcClient : public Net::TcpClient {
     }
 
     void ResumeCoroutine(std::coroutine_handle<> handle) {
-      service_->CoSpawn([](std::coroutine_handle<> h) -> Base::Task<> {
-        h.resume();
-        co_return;
-      }(handle));
+      socket_->GetIoService().CoSpawn(
+          [](std::coroutine_handle<> h) -> Base::Task<> {
+            h.resume();
+            co_return;
+          }(handle));
     }
 
-    void await_resume() noexcept {}
+    int await_resume() noexcept {
+      if (timeout_ || !socket_->IsConnected()) {
+        errno = timeout_ ? ETIMEDOUT : ENOTCONN;
+        return -1;
+      }
+      return 0;
+    }
+
+    bool GetTimeout() const { return timeout_; }
+    void SetTimeout() { timeout_ = true; }
 
    private:
-    Base::IoService* service_;
+    TcpSocket* socket_;
     Call call_;
+    bool timeout_ = false;
   };
 
  protected:
-  template <typename RequestType, typename ResponseType>
-  auto StubCall(void (StubType::*method)(google::protobuf::RpcController*,
-                                         const RequestType* m, ResponseType*,
-                                         google::protobuf::Closure*),
-                google::protobuf::RpcController* controller,
-                const RequestType* request, ResponseType* response) {
+  template <typename RequestType, typename ResponseType,
+            typename REP = typename std::chrono::seconds::rep,
+            typename PERIOD = typename std::chrono::seconds::period>
+  auto StubCall(
+      void (StubType::*method)(google::protobuf::RpcController*,
+                               const RequestType* m, ResponseType*,
+                               google::protobuf::Closure*),
+      google::protobuf::RpcController* controller, const RequestType* request,
+      ResponseType* response,
+      std::chrono::duration<REP, PERIOD> timeout = std::chrono::seconds(10)) {
     std::function<void(google::protobuf::Closure * done)> call =
         [this, method, controller, request,
          response](google::protobuf::Closure* done) {
           (stub_.*method)(controller, request, response, done);
         };
-    return StubCallAwaitable(&socket_.GetIoService(), std::move(call));
+
+    return Base::IoTimeoutAwaitable(
+        &socket_.GetIoService(), StubCallAwaitable(&socket_, std::move(call)),
+        timeout);
   }
 
  protected:

@@ -30,8 +30,9 @@ class EchoRpcClient : public Net::Rpc::RpcClient<Echo::EchoService::Stub> {
       Echo::EchoRequest request;
       request.set_data(message);
       auto response = std::make_unique<Echo::EchoResponse>();
-      co_await StubCall(&Echo::EchoService::Stub::DoEcho, nullptr, &request,
-                        response.get());
+      auto ret = co_await StubCall(&Echo::EchoService::Stub::DoEcho, nullptr,
+                                   &request, response.get());
+      if (ret < 0) break;
       Base::INFO("{}", response->data());
     }
     socket_.Close();
