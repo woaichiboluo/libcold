@@ -74,6 +74,7 @@ Base::Task<SSL*> DoHandshake(Base::IoService* service, int& sockfd,
   auto ssl = SSL_new(Net::SSLContext::GetInstance().GetContext());
   bool error = false;
   Base::ScopeGuard guard([&]() {
+    service->StopListeningAll(sockfd);
     if (error) {
       SSL_free(ssl);
       close(sockfd);
@@ -112,7 +113,7 @@ Base::Task<Net::TcpSocket> Net::Acceptor::Accept(Base::IoService& service) {
   assert(listened_);
   auto [sockfd, addr] = co_await AcceptAwaitable(ioService_, fd_);
 #ifdef COLD_NET_ENABLE_SSL
-  if (enableSSL_) {
+  if (enableSSL_ && sockfd >= 0) {
     auto ssl = co_await DoHandshake(&service, sockfd, addr);
     co_return Net::TcpSocket(service, localAddress_, addr, sockfd, ssl);
   }

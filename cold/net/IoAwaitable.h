@@ -47,7 +47,7 @@ class SSLReadAwaitable : public IoAwaitableBase {
       errno = GetTimeout() ? ETIMEDOUT : ENOTCONN;
       return -1;
     }
-    if (!ready_) return retValue_;
+    if (ready_) return retValue_;
     return SSL_read(ssl_, buf_, static_cast<int>(count_));
   }
 
