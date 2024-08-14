@@ -21,6 +21,14 @@ target_link_libraries(RequestParserTest PRIVATE cold)
 add_executable(SimpleHttpServer simple/simplehttp/HttpServer.cpp ${simplehttpsource})
 target_link_libraries(SimpleHttpServer PRIVATE cold)
 
+# simple/ttcp 
+add_executable(TtcpBlocking simple/ttcp/TtcpBlocking.cpp)
+target_link_libraries(TtcpBlocking PRIVATE cold)
+
+add_executable(TtcpNonBlocking simple/ttcp/TtcpNonBlocking.cpp)
+target_link_libraries(TtcpNonBlocking PRIVATE cold)
+
+
 # asio/chatroom
 add_executable(AsioChatRoomServer asio/chatroom/ChatServer.cpp)
 target_link_libraries(AsioChatRoomServer PRIVATE cold)
