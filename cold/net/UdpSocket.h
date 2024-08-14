@@ -22,6 +22,8 @@ class UdpSocket : public BasicSocket {
       Base::ERROR("create TcpSocket error. errno: {}, reason: {}", errno,
                   Base::ThisThread::ErrorMsg());
     }
+
+    ioService_->ListenReadEvent(fd_, std::noop_coroutine());
   }
 
   UdpSocket(UdpSocket&&) = default;
@@ -43,14 +45,16 @@ class UdpSocket : public BasicSocket {
   auto SendToWithTimeout(const void* buf, size_t len, const IpAddress& dest,
                          std::chrono::duration<REP, PERIOD> duration,
                          int flags = 0) {
-    return IoTimeoutAwaitable(ioService_, SendTo(buf, len, dest), duration);
+    return IoTimeoutAwaitable(ioService_, SendTo(buf, len, dest, flags),
+                              duration);
   }
 
   template <typename REP, typename PERIOD>
   auto RecvFromWithTimeout(void* buf, size_t len, IpAddress& source,
                            std::chrono::duration<REP, PERIOD> duration,
                            int flags = 0) {
-    return IoTimeoutAwaitable(ioService_, RecvFrom(buf, len, source), duration);
+    return IoTimeoutAwaitable(ioService_, RecvFrom(buf, len, source, flags),
+                              duration);
   }
 };
 

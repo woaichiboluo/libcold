@@ -137,4 +137,5 @@ void Net::Acceptor::Listen() {
                 Base::ThisThread::ErrorMsg());
   }
   listened_ = true;
+  ioService_->ListenReadEvent(fd_, std::noop_coroutine());
 }

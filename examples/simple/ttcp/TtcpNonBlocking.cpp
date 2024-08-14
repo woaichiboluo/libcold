@@ -76,6 +76,7 @@ class TtcpSender : public Net::TcpClient {
         tcpNodelay_(tcpNodelay) {}
 
   Base::Task<> OnConnect() override {
+    Base::INFO("Connected to server");
     socket_.GetIoService().CoSpawn(DoTtcp());
     co_return;
   }
@@ -87,6 +88,7 @@ class TtcpSender : public Net::TcpClient {
       Net::SocketOptions::TcpNoDelay option(tcpNodelay_);
       socket_.SetOption(option);
     }
+    Base::INFO("total {:.3f} MB", mbs);
     SessionMessage message;
     message.number = htonl(number_);
     message.length = htonl(length_);
@@ -142,8 +144,9 @@ class TtcpSender : public Net::TcpClient {
 };
 
 int main(int argc, char** argv) {
+  // Base::LogManager::Instance().GetMainLogger()->SetLevel(Base::LogLevel::TRACE);
   if (argc < 2) {
-    Base::INFO("Usage: {} <send|recv>\n", argv[0]);
+    Base::INFO("Usage: {} <send|recv>", argv[0]);
     return -1;
   }
   if (strcmp(argv[1], "send") == 0) {

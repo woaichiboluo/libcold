@@ -8,8 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "cold/thread/Lock.h"
-
 namespace Cold::Base {
 
 class IoWatcher {
@@ -42,17 +40,12 @@ class IoWatcher {
 
   void WakeUp();
 
-  void ListenEvent(int fd, Handle handle, uint32_t ev);
-  void StopListeningEvent(int fd, uint32_t ev);
-
-  void HandleIoEvent(const IoEvent& event, int operation);
   void HandleWakeUp();
 
   int epollFd_;
   int wakeUpFd_;
   std::vector<struct epoll_event> epollEvents_;
-  Mutex mutexForIoEvents_;
-  std::map<int, IoEvent> ioEvents_ GUARDED_BY(mutexForIoEvents_);
+  std::map<int, IoEvent> ioEvents_;
   std::vector<Handle> activeCoroutines_;
 };
 

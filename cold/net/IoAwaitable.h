@@ -31,21 +31,32 @@ class SSLReadAwaitable : public IoAwaitableBase {
 
   ~SSLReadAwaitable() override = default;
 
-  bool await_ready() noexcept { return false; }
+  bool await_ready() noexcept {
+    retValue_ = SSL_read(ssl_, buf_, static_cast<int>(count_));
+    if (retValue_ >= 0) {
+      ready_ = true;
+    } else {
+      int e = SSL_get_error(ssl_, static_cast<int>(retValue_));
+      if (e != SSL_ERROR_WANT_READ) ready_ = true;
+    }
+    return ready_;
+  }
 
   ssize_t await_resume() noexcept {
     if (!connected_ || GetTimeout()) {
       errno = GetTimeout() ? ETIMEDOUT : ENOTCONN;
       return -1;
     }
-    auto n = SSL_read(ssl_, buf_, static_cast<int>(count_));
-    return n;
+    if (!ready_) return retValue_;
+    return SSL_read(ssl_, buf_, static_cast<int>(count_));
   }
 
  private:
   SSL* ssl_;
   void* buf_;
   size_t count_;
+  bool ready_ = false;
+  ssize_t retValue_ = 0;
   const std::atomic<bool>& connected_;
 };
 #endif
@@ -64,7 +75,13 @@ class ReadAwaitable : public IoAwaitableBase {
   }
   ~ReadAwaitable() override = default;
 
-  bool await_ready() noexcept { return !connected_; }
+  bool await_ready() noexcept {
+    if (!connected_) return true;
+    if (ssl_) return false;
+    states_->first = read(fd_, buf_, count_);
+    if (states_->first >= 0 || errno != EAGAIN) ready_ = true;
+    return ready_;
+  }
 
   void await_suspend(std::coroutine_handle<> handle) noexcept {
     if (!ssl_) {
@@ -98,13 +115,14 @@ class ReadAwaitable : public IoAwaitableBase {
       errno = GetTimeout() ? ETIMEDOUT : ENOTCONN;
       return -1;
     }
-    if (!ssl_) states_->first = read(fd_, buf_, count_);
+    if (!ssl_ && !ready_) states_->first = read(fd_, buf_, count_);
     return states_->first;
   }
 
  private:
   void* buf_;
   size_t count_;
+  bool ready_ = false;
   const std::atomic<bool>& connected_;
   SSL* ssl_;
   // first retValue second alreadyResume
@@ -174,21 +192,33 @@ class AcceptAwaitable : public IoAwaitableBase {
 
   ~AcceptAwaitable() override = default;
 
-  bool await_ready() noexcept { return false; }
+  bool await_ready() noexcept {
+    socklen_t arrlen = sizeof(addr_);
+    peer_ = accept4(fd_, reinterpret_cast<struct sockaddr*>(&addr_), &arrlen,
+                    SOCK_NONBLOCK | SOCK_CLOEXEC);
+    if (peer_ >= 0) {
+      ready_ = true;
+    }
+    return ready_;
+  }
 
   std::pair<int, IpAddress> await_resume() noexcept {
     if (GetTimeout()) {
       errno = ETIMEDOUT;
       return {-1, IpAddress{}};
     }
-    socklen_t arrlen = sizeof(addr_);
-    auto peer = accept4(fd_, reinterpret_cast<struct sockaddr*>(&addr_),
-                        &arrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
-    return {peer, IpAddress(addr_)};
+    if (!ready_) {
+      socklen_t arrlen = sizeof(addr_);
+      peer_ = accept4(fd_, reinterpret_cast<struct sockaddr*>(&addr_), &arrlen,
+                      SOCK_NONBLOCK | SOCK_CLOEXEC);
+    }
+    return {peer_, IpAddress(addr_)};
   }
 
  private:
   struct sockaddr_in6 addr_;
+  bool ready_ = false;
+  int peer_ = -1;
 };
 
 class SendToAwaitable : public IoAwaitableBase {
@@ -241,19 +271,27 @@ class RecvFromAwaitable : public IoAwaitableBase {
         flags_(flags) {}
   ~RecvFromAwaitable() override = default;
 
-  bool await_ready() noexcept { return false; }
+  bool await_ready() noexcept {
+    retValue_ =
+        recvfrom(fd_, buf_, len_, flags_, source_->GetSockaddr(), &addrlen_);
+    if (retValue_ >= 0 || errno != EAGAIN) ready_ = true;
+    return false;
+  }
 
   ssize_t await_resume() noexcept {
     if (GetTimeout()) {
       errno = ETIMEDOUT;
       return -1;
     }
+    if (ready_) return retValue_;
     return recvfrom(fd_, buf_, len_, flags_, source_->GetSockaddr(), &addrlen_);
   }
 
  private:
   void* buf_;
   size_t len_;
+  bool ready_ = false;
+  ssize_t retValue_;
   IpAddress* source_;
   socklen_t addrlen_;
   int flags_;

@@ -29,6 +29,7 @@ class TcpSocket : public Net::BasicSocket {
             const IpAddress& remote, int fd, SSL* ssl = nullptr)
       : BasicSocket(service, local, remote, fd, ssl) {
     if (fd >= 0) connected_ = true;
+    ioService_->ListenReadEvent(fd_, std::noop_coroutine());
   }
 
   TcpSocket(TcpSocket&& other) = default;

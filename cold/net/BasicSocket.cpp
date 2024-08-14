@@ -28,7 +28,10 @@ Net::BasicSocket::~BasicSocket() {
     SSL_free(ssl_);
 #endif
   }
-  if (fd_ >= 0) close(fd_);
+  if (fd_ >= 0) {
+    ioService_->StopListeningAll(fd_);
+    close(fd_);
+  }
 }
 
 Net::BasicSocket::BasicSocket(BasicSocket&& other)
