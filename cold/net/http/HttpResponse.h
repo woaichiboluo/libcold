@@ -90,7 +90,11 @@ class HttpResponse {
     headers_[std::move(key)] = std::move(value);
   }
 
-  void SetCloseConnection(bool close) { close_ = close; }
+  void SetCloseConnection(bool close) {
+    connectionStatus_ = close ? kClose : kKeepAlive;
+  }
+
+  void SetUpgradeConnection() { connectionStatus_ = kUpgrade; }
 
   void SetBody(std::unique_ptr<HttpResponseBody> body) {
     body_ = std::move(body);
@@ -100,8 +104,7 @@ class HttpResponse {
   void AddCookie(HttpCookie cookie) { cookies_.push_back(std::move(cookie)); }
 
   void MakeHeaders(std::string& headersBuf) {
-    if (!body_) headers_["Content-Length"] = "0";
-    headers_["Connection"] = close_ ? "close" : "keep-alive";
+    headers_["Connection"] = ConnectionStatusToConnectionStr(connectionStatus_);
     auto firstLine =
         fmt::format("{} {} {}{}", version_, static_cast<int>(status_),
                     HttpStatusToHttpStatusMsg(status_), kCRLF);
@@ -126,7 +129,7 @@ class HttpResponse {
     co_return true;
   }
 
-  bool IsKeepAlive() const { return !close_; }
+  bool IsKeepAlive() const { return connectionStatus_ == kKeepAlive; }
 
   void SendRedirect(std::string_view url) {
     status_ = HttpStatus::FOUND;
@@ -136,11 +139,14 @@ class HttpResponse {
   // for debug
   RawHttpResponse ToRawHttpResponse() const {
     RawHttpResponse response;
-    if (!body_) {
-      response.SetHeader("Content-Length", "0");
+    response.SetVersion(version_);
+    response.SetStatus(status_);
+    if (body_) {
+      body_->SetRelatedHeaders(response.GetAllHeader());
       response.SetBody(body_->ToRawBody());
     }
-    response.SetHeader("Connection", close_ ? "close" : "keep-alive");
+    response.SetHeader("Connection",
+                       ConnectionStatusToConnectionStr(connectionStatus_));
     for (const auto& [key, value] : headers_) {
       response.SetHeader(key, value);
     }
@@ -151,12 +157,26 @@ class HttpResponse {
   }
 
  private:
+  enum ConnectionStatus { kKeepAlive, kClose, kUpgrade };
+
+  static const char* ConnectionStatusToConnectionStr(ConnectionStatus status) {
+    switch (status) {
+      case kKeepAlive:
+        return "keep-alive";
+      case kClose:
+        return "close";
+      case kUpgrade:
+        return "Upgrade";
+    }
+    return nullptr;
+  }
+
   HttpStatus status_ = HttpStatus::OK;
   std::string version_ = "HTTP/1.1";
   std::map<std::string, std::string> headers_;
   std::unique_ptr<HttpResponseBody> body_;
   std::vector<HttpCookie> cookies_;
-  bool close_ = false;
+  ConnectionStatus connectionStatus_ = kKeepAlive;
 };
 
 }  // namespace Cold::Net::Http

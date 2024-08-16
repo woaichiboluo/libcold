@@ -28,6 +28,13 @@ Base::Task<> Net::Http::HttpServer::DoHttp(Net::TcpSocket socket) {
       response.SetCloseConnection(true);
     } else if (parser.HasRequest()) {
       auto rawRequest = parser.TakeRequest();
+#ifdef COLD_NET_ENABLE_SSL
+      if (wsSeerver_ && wsSeerver_->CheckWhetherUpgradeRequest(rawRequest)) {
+        co_await wsSeerver_->OnReceivedUpgradeRequest(std::move(rawRequest),
+                                                      std::move(socket));
+        co_return;
+      }
+#endif
       HttpRequest request(rawRequest, &response, &context_);
       response.SetCloseConnection(!request.IsKeepAlive());
       response.SetVersion(std::string(request.GetVersion()));

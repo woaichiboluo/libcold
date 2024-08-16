@@ -4,6 +4,10 @@
 #include "cold/net/TcpServer.h"
 #include "cold/net/http/ServletContext.h"
 
+#ifdef COLD_NET_ENABLE_SSL
+#include "cold/net/http/WebSocketServer.h"
+#endif
+
 namespace Cold::Net::Http {
 
 class HttpServer : public TcpServer {
@@ -79,6 +83,17 @@ class HttpServer : public TcpServer {
   ServletContext context_;
   std::map<HttpStatus, std::function<void(HttpResponse&)>> errorPageHandler_;
   std::function<void(HttpResponse&)> defaultErrorPageHandler_;
+
+#ifdef COLD_NET_ENABLE_SSL
+ public:
+  void SetWebSocketServer(std::unique_ptr<WebSocketServer> wsServer) {
+    assert(!IsStarted());
+    wsSeerver_ = std::move(wsServer);
+  }
+
+ private:
+  std::unique_ptr<WebSocketServer> wsSeerver_;
+#endif
 };
 
 }  // namespace Cold::Net::Http

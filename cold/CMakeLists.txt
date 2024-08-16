@@ -17,6 +17,10 @@ set(
     time/TimerQueue.cpp
 )
 
+if(OpenSSL_FOUND)
+    set(SOURCE ${SOURCE} net/http/WebSocket.cpp net/http/WebSocketServer.cpp net/http/WebSocketParser.cpp)
+endif()
+
 
 add_library(cold ${SOURCE})
 target_link_libraries(cold llhttp)
@@ -24,6 +28,7 @@ target_link_libraries(cold llhttp)
 if(OpenSSL_FOUND)
     target_link_libraries(cold ${OPENSSL_LIBRARIES})
 endif()
+
 
 Set(ProtoFolder ${CMAKE_SOURCE_DIR}/cold/net/rpc)
 

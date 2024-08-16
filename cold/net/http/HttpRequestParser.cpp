@@ -144,6 +144,10 @@ int Net::Http::HttpRequestParser::OnMessageComplete(llhttp_t* parser) {
 
 bool Net::Http::HttpRequestParser::Parse(const char* data, size_t len) {
   auto errcode = llhttp_execute(&parser_, data, len);
+  if (errcode == HPE_PAUSED_UPGRADE) {
+    llhttp_resume_after_upgrade(&parser_);
+    errcode = llhttp_execute(&parser_, nullptr, 0);
+  }
   return errcode == HPE_OK;
 }
 

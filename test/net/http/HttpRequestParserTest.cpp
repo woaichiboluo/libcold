@@ -308,3 +308,27 @@ TEST_CASE("test") {
         "8f%82%e6%95%b0%e4%ba%8c%3d%e5%80%bc%e4%ba%8c%26%e5%8f%82%e6%95%b0%e4%"
         "b8%89%3d%e5%80%bc%e4%b8%89%26key4%3dvalue4");
 }
+
+TEST_CASE("test websocket") {
+  const char* str =
+      "GET / HTTP/1.1\r\n"
+      "Host: localhost:8080\r\n"
+      "Origin: http://127.0.0.1:3000\r\n"
+      "Connection: Upgrade\r\n"
+      "Upgrade: websocket\r\n"
+      "Sec-WebSocket-Version: 13\r\n"
+      "Sec-WebSocket-Key: w4v7O6xFTi36lq3RNcgctw==\r\n\r\n";
+  Cold::Net::Http::HttpRequestParser parser;
+  CHECK(parser.Parse(str, strlen(str)));
+  CHECK(parser.HasRequest());
+  auto request = parser.TakeRequest();
+  CHECK(request.GetMethod() == "GET");
+  CHECK(request.GetUrl() == "/");
+  CHECK(request.GetVersion() == "HTTP/1.1");
+  CHECK(request.GetHeader("Host") == "localhost:8080");
+  CHECK(request.GetHeader("Origin") == "http://127.0.0.1:3000");
+  CHECK(request.GetHeader("Connection") == "Upgrade");
+  CHECK(request.GetHeader("Upgrade") == "websocket");
+  CHECK(request.GetHeader("Sec-WebSocket-Version") == "13");
+  CHECK(request.GetHeader("Sec-WebSocket-Key") == "w4v7O6xFTi36lq3RNcgctw==");
+}

@@ -68,6 +68,7 @@ class HttpRequest {
   }
 
   void RemoveAttribute(const std::string& key) { attributes_.erase(key); }
+
   bool IsKeepAlive() const {
     if (rawRequest_.HasHeader("Connection"))
       return rawRequest_.GetHeader("Connection") == "keep-alive";

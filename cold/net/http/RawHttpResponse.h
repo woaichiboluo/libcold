@@ -15,7 +15,7 @@ class RawHttpResponse {
   ~RawHttpResponse() = default;
 
   void SetMethod(std::string method) { method_ = std::move(method); }
-  void SetStatus(std::string method) { method_ = std::move(method); }
+  void SetStatus(HttpStatus status) { status_ = status; }
   void SetVersion(std::string version) { version_ = std::move(version); }
   void SetBody(std::string body) { body_ = std::move(body); }
   HttpStatus GetStatus() const { return status_; }
