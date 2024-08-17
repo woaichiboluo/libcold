@@ -32,6 +32,7 @@ class TextBody : public HttpResponseBody {
   void SetRelatedHeaders(
       std::map<std::string, std::string>& headers) const override {
     headers["Content-Length"] = std::to_string(body_.size());
+    headers["Content-Type"] = "text/html;charset=utf-8";
   }
 
   Base::Task<bool> Send(Net::TcpSocket& socket) override {
