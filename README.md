@@ -12,6 +12,12 @@ cmake .. # cmake .. -DCMAKE_BUILD_TYPE=release
 make -j8
 ```   
 
+## TODO   
+* [x] 使用epoll的ET模式  
+* [x] WebSocket支持  
+* [ ] Http ETag缓存支持     
+* [ ] header only  
+
 
 ## 配置模块  
 配置模块通过json实现，使用json-pointer来完成对嵌套json进行查询与设置。   
