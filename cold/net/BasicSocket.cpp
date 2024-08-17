@@ -49,7 +49,10 @@ Net::BasicSocket::BasicSocket(BasicSocket&& other)
 
 Net::BasicSocket& Net::BasicSocket::operator=(BasicSocket&& other) {
   if (this == &other) return *this;
-  if (fd_ >= 0) close(fd_);
+  if (fd_ >= 0) {
+    close(fd_);
+    ioService_->StopListeningAll(other.fd_);
+  }
   ioService_ = other.ioService_;
   fd_ = other.fd_;
   localAddress_ = other.localAddress_;
