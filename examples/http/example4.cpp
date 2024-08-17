@@ -35,5 +35,6 @@ int main() {
     resp.SetBody(std::move(body));
   });
   httpServer.SetWebSocketServer(std::move(wsServer));
+  Base::INFO("example4: Echo WebSocket Server. Run at port: 8080");
   httpServer.Start();
 }
