@@ -5,10 +5,10 @@
 
 #include "cold/net/TcpServer.h"
 #include "cold/net/http/RawHttpRequest.h"
+#include "cold/net/http/WebSocket.h"
 
 namespace Cold::Net::Http {
 
-class WebSocket;
 using WebSocketPtr = std::shared_ptr<WebSocket>;
 
 class WebSocketServer {
@@ -26,8 +26,6 @@ class WebSocketServer {
    private:
     std::function<void(RawHttpRequest, TcpSocket)> onUpgradeRequest_;
   };
-
-  using WebSocketPtr = std::shared_ptr<WebSocket>;
 
  public:
   // for compose with HttpServer
