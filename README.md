@@ -259,9 +259,9 @@ class HelloWebSocket : public WebSocketServer {
   ~HelloWebSocket() override = default;
 
   void OnConnect(WebSocketPtr ws) override {
-    ws->SetOnRecv([ws](WebSocketPtr, const char* data, size_t len) {
+    ws->SetOnRecv([](WebSocketPtr wsock, const char* data, size_t len) {
       std::string_view sv("hello websocket");
-      ws->Send(sv.data(), sv.size());
+      wsock->Send(sv.data(), sv.size());
     });
   }
   void OnClose(WebSocketPtr ws) override { Base::INFO("WebSocket closed"); }
