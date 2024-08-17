@@ -2,14 +2,13 @@
 #define NET_HTTP_STATICFILEBODY
 
 #include <fcntl.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 #include <cassert>
-#include <chrono>
 #include <filesystem>
 #include <system_error>
 
-#include "cold/net/IoAwaitable.h"
 #include "cold/net/http/HttpCommon.h"
 #include "cold/net/http/HttpResponse.h"
 #include "cold/util/Config.h"
@@ -189,6 +188,7 @@ class StaticFileBody : public HttpResponseBody {
             "/http/sendfile-timeout-ms", 15000);
     assert(response_->GetStatus() == HttpStatus::OK);
     assert(fd_ >= 0);
+#ifndef COLD_NET_ENABLE_SSL
     off_t offset = 0;
     size_t alreadySend = 0;
     while (alreadySend < fileSize_ && socket.IsConnected()) {
@@ -202,6 +202,20 @@ class StaticFileBody : public HttpResponseBody {
       alreadySend += static_cast<size_t>(ret);
     }
     co_return alreadySend == fileSize_;
+#else
+    auto ptr = mmap(nullptr, fileSize_, PROT_READ, MAP_PRIVATE, fd_, 0);
+    if (ptr == MAP_FAILED) {
+      co_return false;
+    }
+    Base::ScopeGuard guard([ptr, size = fileSize_] { munmap(ptr, size); });
+    auto ret = co_await socket.WriteNWithTimeout(
+        reinterpret_cast<const char*>(ptr), fileSize_,
+        std::chrono::milliseconds(kReadTimeoutMs));
+    if (ret != static_cast<ssize_t>(fileSize_)) {
+      co_return false;
+    }
+    co_return true;
+#endif
   }
 
   // for debug
