@@ -2,17 +2,25 @@
 
 #include <cassert>
 
-#include "cold/log/Logger.h"
+#include "cold/net/Endian.h"
 
 using namespace Cold;
 
-Net::Http::WebSocketParser::ParseState Net::Http::WebSocketParser::Parse(
-    const char* data, size_t len) {
-  if (frames_.empty()) {
+bool Net::Http::WebSocketParser::Parse(const char* data, size_t len) {
+  buffer_.insert(buffer_.end(), data, data + len);
+  auto state = DoParse();
+  while (state == kSuccess) {
+    state = DoParse();
+  }
+  return state != kError;
+}
+
+Net::Http::WebSocketParser::ParseState Net::Http::WebSocketParser::DoParse() {
+  if (newFrame_) {
     frames_.push_back({});
   }
+  newFrame_ = false;
   auto& frame = frames_.back();
-  buffer_.insert(buffer_.end(), data, data + len);
   size_t expectLen = 2;
   // 1 byte FIN RSV1 RSV2 RSV3 OPCODE
   // 1 + 2 + 8 = 11 byte byte MASK (PAYLOAD LENGTH 7 bit or 2 byte or 8 byte)
@@ -41,51 +49,51 @@ Net::Http::WebSocketParser::ParseState Net::Http::WebSocketParser::Parse(
     more = 8;
   expectLen += more;
   if (buffer_.size() < expectLen) return kNeedMore;
+  char* ptr = nullptr;
+  uint16_t payloadLen16 = 0;
+  uint64_t payloadLen64 = 0;
   if (more) {
+    ptr = more == 2 ? reinterpret_cast<char*>(&payloadLen16)
+                    : reinterpret_cast<char*>(&payloadLen64);
     for (size_t i = 0; i < more; ++i) {
-      frame.payloadLen =
-          (frame.payloadLen << 8) | static_cast<unsigned long>(buffer_[2 + i]);
+      ptr[i] = buffer_[2 + i];
     }
+    frame.payloadLen = more == 2 ? Host16ToNetwork16(payloadLen16)
+                                 : Host64ToNetwork64(payloadLen64);
   }
   expectLen += frame.payloadLen;
   if (buffer_.size() < expectLen) return kNeedMore;
   for (size_t i = 0; i < 4 && frame.mask; ++i) {
-    Base::INFO("maskingKey i :{} {}", i,
-               static_cast<int>(buffer_[2 + more + i]));
     frame.maskingKey[i] = buffer_[2 + more + i];
   }
-  Base::INFO("length:{}", 2 + more + (frame.mask ? 4 : 0));
   std::string_view payload(buffer_.data() + 2 + more + (frame.mask ? 4 : 0),
                            frame.payloadLen);
-  Base::INFO("payload:{}", payload);
   frame.payload.reserve(frame.payloadLen);
   if (frame.mask) {
-    Base::INFO("do masking");
     for (size_t i = 0; i < frame.payloadLen; ++i) {
       frame.payload.push_back(
           static_cast<char>(payload[i] ^ frame.maskingKey[i % 4]));
-      Base::INFO("payload[i]:{}", payload[i]);
-      Base::INFO("decode payload[i]:{}",
-                 static_cast<char>(payload[i] ^ frame.maskingKey[i % 4]));
     }
   } else {
     frame.payload.append(payload);
   }
-  Base::INFO("expectLen:{}", expectLen);
   buffer_.erase(buffer_.begin(),
                 buffer_.begin() + static_cast<long>(expectLen));
+  newFrame_ = true;
   if (frame.fin == 1) {
-    return kSuccess;
-  } else {
-    // merge frames
-    size_t n = frames_.size() - 1;
-    for (size_t i = 0; i < n - 1; ++i) {
-      assert(frames_[i].fin == 0);
-      assert(frames_[i].opcode == 0);
-      frames_[n - 1].payloadLen += frames_[i + 1].payloadLen;
-      frames_[n - 1].payload.append(frames_[i + 1].payload);
+    // merge all frames to last one
+    if (frames_.size() > 1) {
+      auto& beginFrame = frames_.front();
+      for (size_t i = 1; i < frames_.size(); ++i) {
+        assert(frames_[i].opcode == 0);
+        beginFrame.payload.append(frames_[i].payload);
+      }
+      beginFrame.payloadLen = beginFrame.payload.size();
+      beginFrame.fin = 1;
+      frames_.erase(frames_.begin() + 1, frames_.end());
     }
-    frames_[n - 1].fin = 1;
+    completeFrames_.push(std::move(frames_.front()));
+    frames_.pop_back();
   }
   return kSuccess;
 }
@@ -96,17 +104,19 @@ void Net::Http::WebSocketParser::MakeFrameToBuffer(
   writeBuffer.push_back(static_cast<char>(0x80 | frame.opcode));
   uint8_t maskAndLen = frame.mask ? 0x80 : 0;
   auto size = frame.payloadView.size();
-  if (frame.payloadView.size() < 126) {
+  if (size < 126) {
     maskAndLen |= static_cast<uint8_t>(size);
     writeBuffer.push_back(static_cast<char>(maskAndLen));
-  } else if (frame.payloadView.size() < 65536) {
+  } else if (size < 65536) {
     maskAndLen |= 126;
     writeBuffer.push_back(static_cast<char>(maskAndLen));
-    auto ptr = reinterpret_cast<const char*>(&size);
+    uint16_t cur = Host16ToNetwork16(static_cast<uint16_t>(size));
+    auto ptr = reinterpret_cast<const char*>(&cur);
     writeBuffer.insert(writeBuffer.end(), ptr, ptr + 2);
   } else {
     maskAndLen |= 127;
-    auto ptr = reinterpret_cast<const char*>(&size);
+    auto cur = Host64ToNetwork64(static_cast<uint64_t>(size));
+    auto ptr = reinterpret_cast<const char*>(&cur);
     writeBuffer.push_back(static_cast<char>(maskAndLen));
     writeBuffer.insert(writeBuffer.end(), ptr, ptr + 8);
   }
@@ -116,7 +126,7 @@ void Net::Http::WebSocketParser::MakeFrameToBuffer(
       maskingKey[i] = static_cast<uint8_t>(rand() & 0xff);
       writeBuffer.push_back(static_cast<char>(maskingKey[i]));
     }
-    for (size_t i = 0; i < frame.payloadView.size(); ++i) {
+    for (size_t i = 0; i < size; ++i) {
       writeBuffer.push_back(
           static_cast<char>(frame.payloadView[i] ^ maskingKey[i % 4]));
     }

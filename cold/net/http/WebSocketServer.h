@@ -43,9 +43,11 @@ class WebSocketServer {
   Base::Task<> OnReceivedUpgradeRequest(RawHttpRequest request,
                                         TcpSocket socket);
 
-  virtual void OnNewWebSocket(WebSocketPtr ws) {
+  virtual void OnConnect(WebSocketPtr ws) {
     Base::INFO("New WebSocket connected");
   }
+
+  virtual void OnClose(WebSocketPtr ws) { Base::INFO("WebSocket closed"); }
 
   void Start() {
     assert(wsServer_);

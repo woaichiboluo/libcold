@@ -36,7 +36,9 @@ class WebSocket : public std::enable_shared_from_this<WebSocket> {
   // call by server not user
   Base::Task<> DoRead();
   Base::Task<> DoWrite();
+
   void SendPong();
+  Base::Task<> SendPing(WebSocketPtr self);
   void OnError();
 
   std::string requestUrl_;
@@ -48,6 +50,7 @@ class WebSocket : public std::enable_shared_from_this<WebSocket> {
   bool isWriting_ = false;
   std::vector<char> writeTempBuffer_;
   std::vector<char> writeBuffer_;
+  Base::Time lastPingTime_;
 };
 
 }  // namespace Cold::Net::Http

@@ -72,11 +72,12 @@ Base::Task<> Net::Http::WebSocketServer::OnReceivedUpgradeRequest(
   ws->onClose_ = [this](std::shared_ptr<WebSocket> sock) {
     Base::LockGuard guard(mutex_);
     webSockets_.erase(sock);
+    OnClose(sock);
   };
   {
     Base::LockGuard guard(mutex_);
     webSockets_.insert(ws);
   }
-  OnNewWebSocket(ws);
+  OnConnect(ws);
   co_await ws->DoRead();
 }
