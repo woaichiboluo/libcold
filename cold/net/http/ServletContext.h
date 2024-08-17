@@ -53,7 +53,13 @@ class ServletContext {
   void ForwardTo(std::string_view url, HttpRequest& request,
                  HttpResponse& response) {
     if (!dispatcher_->DoDispathcer(url, request, response)) {
-      defaultServlet_->Handle(request, response);
+      if (url == "/") {  // for root url try match index.html
+        if (!dispatcher_->DoDispathcer("/index.html", request, response)) {
+          defaultServlet_->Handle(request, response);
+        }
+      } else {
+        defaultServlet_->Handle(request, response);
+      }
     }
   }
 
