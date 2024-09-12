@@ -1,35 +1,41 @@
 #ifndef COLD_LOG_LOGFACTORY
 #define COLD_LOG_LOGFACTORY
 
-#include <initializer_list>
-#include <memory>
+#include "cold/log/LogManager.h"
 
-#include "cold/log/Logger.h"
+namespace Cold {
 
-namespace Cold::Base {
+class LogSink;
 
-struct LoggerFactory {
-  template <typename Sink, typename... SinkArgs>
-  requires std::is_base_of_v<LogSink, Sink>
-  static std::shared_ptr<Logger> MakeLogger(std::string loggerName,
-                                            SinkArgs&&... args) {
-    auto sink = std::make_shared<Sink>(std::forward<SinkArgs>(args)...);
-    auto logger =
-        std::make_shared<Logger>(std::move(loggerName), std::move(sink));
-    LogManager::Instance().AddLogger(logger);
-    return logger;
-  }
-
-  static std::shared_ptr<Logger> MakeLogger(
-      std::string loggerName,
-      std::initializer_list<std::shared_ptr<LogSink>>&& sinks) {
-    auto logger =
-        std::make_shared<Logger>(std::move(loggerName), std::move(sinks));
-    LogManager::Instance().AddLogger(logger);
-    return logger;
+struct LogSinkFactory {
+  template <typename T, typename... Args>
+  static std::shared_ptr<LogSink> Create(Args &&...args) {
+    return std::make_shared<T>(std::forward<Args>(args)...);
   }
 };
 
-}  // namespace Cold::Base
+struct LogFactory {
+  static std::shared_ptr<Logger> MakeLogger(
+      std::string name,
+      std::initializer_list<std::shared_ptr<LogSink>> &&list) {
+    return MakeLogger(std::move(name), list.begin(), list.end());
+  }
+
+  template <typename It>
+  static std::shared_ptr<Logger> MakeLogger(std::string name, It begin,
+                                            It end) {
+    auto logger = std::make_shared<Logger>(std::move(name), begin, end);
+    LogManager::GetInstance().Add(logger);
+    return logger;
+  }
+
+  template <typename T, typename... Args>
+  static std::shared_ptr<Logger> Create(std::string name, Args &&...args) {
+    auto sink = LogSinkFactory::Create<T>(std::forward<Args>(args)...);
+    return MakeLogger(std::move(name), {sink});
+  }
+};
+
+}  // namespace Cold
 
 #endif /* COLD_LOG_LOGFACTORY */

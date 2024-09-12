@@ -17,3 +17,5 @@ CMakeSettings.json
 .vs
 *.pb.cc
 *.pb.h
+
+cold_old
