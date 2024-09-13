@@ -2,12 +2,10 @@
 #define COLD_LOG_LOGGER
 
 #include <atomic>
-// FIXME
-#include <unistd.h>
-
 #include <vector>
 
-#include "cold/log/logsinks/LogSink.h"
+#include "../thread/Thread.h"
+#include "logsinks/LogSink.h"
 
 namespace Cold {
 
@@ -83,8 +81,8 @@ class Logger {
     auto logLine = fmt::format(fmt, std::forward<Args>(args)...);
     message.logLine = logLine;
     // FIXME
-    message.threadName = "main";
-    auto id = std::to_string(getpid());
+    message.threadName = ThisThread::ThreadName();
+    auto id = ThisThread::ThreadIdStr();
     message.threadId = id;
     SinkIt(message);
   }

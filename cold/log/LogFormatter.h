@@ -1,13 +1,17 @@
-#ifndef COLD_BASE_LOGFORMATTER
-#define COLD_BASE_LOGFORMATTER
+#ifndef COLD_LOG_LOGFORMATTER
+#define COLD_LOG_LOGFORMATTER
 
 #include <charconv>
 #include <memory>
 #include <source_location>
 #include <string_view>
 
-#include "cold/time/Time.h"
-#include "third_party/fmt/include/fmt/format.h"
+#ifndef FMT_HEADER_ONLY
+#define FMT_HEADER_ONLY
+#endif
+
+#include "../third_party/fmt/include/fmt/format.h"
+#include "../time/Time.h"
 
 namespace Cold {
 
@@ -370,4 +374,4 @@ inline LogFormatter::LogFormatterPtr MakeLogFormatter(std::string pattern,
 
 }  // namespace Cold
 
-#endif /* COLD_BASE_LOGFORMATTER */
+#endif /* COLD_LOG_LOGFORMATTER */

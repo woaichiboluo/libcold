@@ -3,7 +3,7 @@
 
 #include <mutex>
 
-#include "cold/log/LogFormatter.h"
+#include "../LogFormatter.h"
 
 namespace Cold {
 

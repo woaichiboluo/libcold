@@ -1,7 +1,7 @@
 #ifndef COLD_LOG_LOGFACTORY
 #define COLD_LOG_LOGFACTORY
 
-#include "cold/log/LogManager.h"
+#include "../log/LogManager.h"
 
 namespace Cold {
 

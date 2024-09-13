@@ -1,8 +1,8 @@
 #ifndef COLD_LOG_LOGSINKS_NULLSINK
 #define COLD_LOG_LOGSINKS_NULLSINK
 
-#include "cold/log/LogFactory.h"
-#include "cold/log/logsinks/LogSink.h"
+#include "../LogFactory.h"
+#include "LogSink.h"
 
 namespace Cold {
 

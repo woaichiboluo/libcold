@@ -1,5 +1,3 @@
-#include <thread>
-
 #include "cold/Log.h"
 #include "cold/log/logsinks/BasicFileSink.h"
 #include "cold/log/logsinks/NullSink.h"
@@ -39,14 +37,15 @@ void TestOneSinkMultiLoggers() {
       INFO(logger, "TestOneSinkMultiLoggers{}", 1);
     }
   };
-  std::vector<std::unique_ptr<std::thread>> threads;
+  std::vector<std::unique_ptr<Thread>> threads;
   for (size_t i = 0; i < 4; ++i) {
-    auto thread = std::make_unique<std::thread>(
+    auto thread = std::make_unique<Thread>(
         std::bind(logFunc, fmt::format("logger{}", i + 1)));
+    thread->Start();
     threads.push_back(std::move(thread));
   }
   for (size_t i = 0; i < 4; ++i) {
-    threads[i]->join();
+    threads[i]->Join();
   }
   assert(LogManager::GetInstance().Drop("logger1"));
   assert(LogManager::GetInstance().Drop("logger2"));
@@ -75,14 +74,15 @@ void TestMultiSinksMultiLoggers() {
       INFO(logger, "TestMultiSinkMultiLoggers");
     }
   };
-  std::vector<std::unique_ptr<std::thread>> threads;
+  std::vector<std::unique_ptr<Thread>> threads;
   for (size_t i = 0; i < 4; ++i) {
-    auto thread = std::make_unique<std::thread>(
+    auto thread = std::make_unique<Thread>(
         std::bind(logFunc, fmt::format("logger{}", i + 1)));
+    thread->Start();
     threads.push_back(std::move(thread));
   }
   for (size_t i = 0; i < 4; ++i) {
-    threads[i]->join();
+    threads[i]->Join();
   }
   assert(LogManager::GetInstance().Drop("logger1"));
   assert(LogManager::GetInstance().Drop("logger2"));

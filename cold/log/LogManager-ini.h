@@ -1,8 +1,8 @@
 #ifndef COLD_LOG_LOGMANAGER_INI
 #define COLD_LOG_LOGMANAGER_INI
 
-#include "cold/log/Logger.h"
-#include "cold/log/logsinks/StdoutColorSink.h"
+#include "Logger.h"
+#include "logsinks/StdoutColorSink.h"
 
 namespace Cold {
 

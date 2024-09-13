@@ -5,8 +5,8 @@
 #include <chrono>
 #include <cstdio>
 
-#include "cold/log/LogFactory.h"
-#include "cold/log/logsinks/LogSink.h"
+#include "../LogFactory.h"
+#include "LogSink.h"
 
 namespace Cold {
 

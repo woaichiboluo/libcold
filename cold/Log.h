@@ -1,8 +1,8 @@
 #ifndef COLD_LOG
 #define COLD_LOG
 
-#include "cold/log/LogManager-ini.h"
-#include "cold/log/Logger.h"
+#include "log/LogManager-ini.h"
+#include "log/Logger.h"
 
 namespace Cold {
 
@@ -24,6 +24,11 @@ using LoggerPtr = std::shared_ptr<Logger>;
           LOGLEVEL, wrap, fmt, std::forward<Args>(args)...);                 \
     }                                                                        \
   };                                                                         \
+  template <typename... Args>                                                \
+  NAME(fmt::format_string<Args...> fmt, Args &&...args) -> NAME<Args...>;    \
+  template <typename... Args>                                                \
+  NAME(Logger *logger, fmt::format_string<Args...> fmt, Args &&...args)      \
+      -> NAME<Args...>;                                                      \
   template <typename... Args>                                                \
   NAME(const LoggerPtr &logger, fmt::format_string<Args...> fmt,             \
        Args &&...args) -> NAME<Args...>;

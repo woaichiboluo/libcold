@@ -1,9 +1,9 @@
 #ifndef COLD_LOG_LOGSINKS_STDOUTCOLORSINK
 #define COLD_LOG_LOGSINKS_STDOUTCOLORSINK
 
-#include "cold/log/LogFactory.h"
-#include "cold/log/ShellColor.h"
-#include "cold/log/logsinks/LogSink.h"
+#include "../LogFactory.h"
+#include "../ShellColor.h"
+#include "LogSink.h"
 
 namespace Cold {
 

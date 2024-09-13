@@ -1,7 +1,7 @@
 #include <map>
 
+#include "cold/log/LogFormatter.h"
 #include "cold/log/ShellColor.h"
-#include "third_party/fmt/include/fmt/core.h"
 
 using namespace Cold::ShellColor;
 
