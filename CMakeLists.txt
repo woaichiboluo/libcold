@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -g")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Wno-old-style-cast")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wconversion -Wshadow -Woverloaded-virtual")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_HEADER_ONLY")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_HEADER_ONLY")
 
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
@@ -47,7 +47,7 @@ message("CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER_ID}")
 message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 message("CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
 
-include_directories(${PROJECT_SOURCE_DIR})
+# include_directories(${PROJECT_SOURCE_DIR})
 # include_directories(${PROJECT_SOURCE_DIR}/third_party/uuid)
 
 
