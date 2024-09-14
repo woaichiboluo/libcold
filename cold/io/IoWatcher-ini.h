@@ -30,16 +30,20 @@ inline void IoEvent::EnableWritingET() {
 
 inline void IoEvent::DisableReading() {
   events_ &= (~EPOLLIN | ~EPOLLET);
+  onWrite_ = std::coroutine_handle<>();
   watcher_->UpdateIoEvent(this);
 }
 
 inline void IoEvent::DisableWriting() {
   events_ &= (~EPOLLOUT | ~EPOLLET);
+  onWrite_ = std::coroutine_handle<>();
   watcher_->UpdateIoEvent(this);
 }
 
 inline void IoEvent::DisableAll() {
   events_ = 0;
+  onRead_ = std::coroutine_handle<>();
+  onWrite_ = std::coroutine_handle<>();
   watcher_->UpdateIoEvent(this);
 }
 
@@ -58,9 +62,12 @@ inline void IoWatcher::ReturnIoEvent(IoEvent* ev) {
   ioEvents_.erase(ev->fd_);
 }
 
+inline void IoEvent::ReturnIoEvent() { watcher_->ReturnIoEvent(this); }
+
 inline IoWatcher::IoWatcher()
     : epollFd_(epoll_create1(EPOLL_CLOEXEC)),
       wakeUpFd_(eventfd(0, EFD_CLOEXEC)) {
+  epollEvents_.resize(64);
   if (epollFd_ < 0) {
     FATAL("create epoll fd error. reason: {}", ThisThread::ErrorMsg());
   }
@@ -127,7 +134,8 @@ inline void IoWatcher::WatchIo(std::vector<std::coroutine_handle<>>& pending,
     return;
   }
   size_t size = static_cast<size_t>(ioCnt);
-  TRACE("WatchIo total active fd: {}", size);
+  TRACE("WatchIo total active fd: {} ioEventMap size:{}", size,
+        ioEvents_.size());
   for (size_t i = 0; i < size; ++i) {
     auto& ev = epollEvents_[i];
     auto* ioEvent = static_cast<IoEvent*>(ev.data.ptr);

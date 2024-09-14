@@ -13,6 +13,7 @@ inline IoContext::IoContext()
 inline void IoContext::Start() {
   running_ = true;
   while (running_) {
+    TRACE("loop");
     std::vector<Task<>> pendingTasks;
     {
       std::lock_guard<std::mutex> lock(mutexForPendingTasks_);
@@ -33,8 +34,10 @@ inline void IoContext::Stop() {
 }
 
 inline void IoContext::CoSpawn(Task<> task) {
-  std::lock_guard<std::mutex> lock(mutexForPendingTasks_);
-  pendingTasks_.push_back(std::move(task));
+  {
+    std::lock_guard<std::mutex> lock(mutexForPendingTasks_);
+    pendingTasks_.push_back(std::move(task));
+  }
   ioWatcher_->WakeUp();
 }
 

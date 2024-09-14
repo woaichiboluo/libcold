@@ -51,6 +51,11 @@ class IoEvent {
   std::string DumpEvents() const { return DumpEv(events_); }
   std::string DumpEventsInEpoll() const { return DumpEv(eventsInEpoll_); }
 
+  void ClearReadCoroutine() { onRead_ = std::coroutine_handle<>(); }
+  void ClearWriteCoroutine() { onWrite_ = std::coroutine_handle<>(); }
+
+  void ReturnIoEvent();
+
  private:
   int fd_ = -1;
   uint32_t events_ = 0;
