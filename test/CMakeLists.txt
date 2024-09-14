@@ -12,3 +12,5 @@ add_executable(LogSinkTest LogSinkTest.cpp)
 
 add_executable(TaskTest TaskTest.cpp)
 add_test(NAME TaskTest COMMAND TaskTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+add_executable(IoAwaitableTest IoAwaitableTest.cpp)
