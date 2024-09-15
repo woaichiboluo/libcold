@@ -64,8 +64,13 @@ inline void IoWatcher::ReturnIoEvent(IoEvent* ev) {
 
 inline void IoEvent::ReturnIoEvent() { watcher_->ReturnIoEvent(this); }
 
-inline IoWatcher::IoWatcher()
-    : epollFd_(epoll_create1(EPOLL_CLOEXEC)),
+inline IoContext& IoEvent::GetIoContext() const {
+  return watcher_->GetIoContext();
+}
+
+inline IoWatcher::IoWatcher(IoContext* ioContext)
+    : ioContext_(ioContext),
+      epollFd_(epoll_create1(EPOLL_CLOEXEC)),
       wakeUpFd_(eventfd(0, EFD_CLOEXEC)) {
   epollEvents_.resize(64);
   if (epollFd_ < 0) {

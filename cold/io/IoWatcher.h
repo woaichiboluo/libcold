@@ -10,7 +10,7 @@ namespace Cold {
 
 class IoWatcher {
  public:
-  IoWatcher();
+  IoWatcher(IoContext* ioContext);
   ~IoWatcher();
 
   void WatchIo(std::vector<std::coroutine_handle<>>& pending, int waitMs);
@@ -22,9 +22,12 @@ class IoWatcher {
   IoEvent* TakeIoEvent(int fd);
   void ReturnIoEvent(IoEvent* ev);
 
+  IoContext& GetIoContext() const { return *ioContext_; }
+
  private:
   void HandleWakeUp();
 
+  IoContext* ioContext_;
   int epollFd_;
   int wakeUpFd_;
   std::vector<struct epoll_event> epollEvents_;

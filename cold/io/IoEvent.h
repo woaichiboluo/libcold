@@ -9,6 +9,7 @@
 namespace Cold {
 
 class IoWatcher;
+class IoContext;
 
 class IoEvent {
  public:
@@ -55,6 +56,8 @@ class IoEvent {
   void ClearWriteCoroutine() { onWrite_ = std::coroutine_handle<>(); }
 
   void ReturnIoEvent();
+
+  IoContext& GetIoContext() const;
 
  private:
   int fd_ = -1;
