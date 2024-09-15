@@ -26,6 +26,10 @@ class PromiseBase {
     continuation_ = continuation;
   }
 
+  bool IsReady() const { return ready_; }
+
+  void SetReady() { ready_ = true; }
+
   void SetScheduler(Scheduler* scheduler) { scheduler_ = scheduler; }
 
  private:
@@ -33,13 +37,13 @@ class PromiseBase {
     bool await_ready() noexcept { return false; }
 
     template <typename T>
-    std::coroutine_handle<> await_suspend(
-        std::coroutine_handle<T> handle) noexcept;
+    void await_suspend(std::coroutine_handle<T> handle) noexcept;
 
     void await_resume() noexcept {}
   };
 
-  std::coroutine_handle<> continuation_ = std::noop_coroutine();
+  bool ready_ = false;
+  std::coroutine_handle<> continuation_;
   Scheduler* scheduler_ = nullptr;
 };
 
@@ -119,10 +123,12 @@ class Task {
 
     bool await_ready() noexcept { return false; }
 
-    std::coroutine_handle<> await_suspend(
-        std::coroutine_handle<> caller) noexcept {
+    bool await_suspend(std::coroutine_handle<> caller) noexcept {
       currentCoro_.promise().SetContinuation(caller);
-      return currentCoro_;
+      currentCoro_.resume();
+      auto ready = currentCoro_.promise().IsReady();
+      currentCoro_.promise().SetReady();
+      return !ready;
     }
 
     auto await_resume() noexcept {

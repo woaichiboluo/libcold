@@ -24,11 +24,6 @@ class Scheduler {
     pendingCoros_.push_back(handle);
   }
 
-  //   resume a pending coroutine
-  void CoSpawn(std::coroutine_handle<> handle) {
-    pendingCoros_.push_back(handle);
-  }
-
   void DoSchedule() {
     for (const auto& handle : pendingCoros_) {
       assert(!handle.done());
@@ -67,14 +62,16 @@ class Scheduler {
 namespace detail {
 
 template <typename T>
-std::coroutine_handle<> PromiseBase::FinalAwaitable::await_suspend(
+void PromiseBase::FinalAwaitable::await_suspend(
     std::coroutine_handle<T> handle) noexcept {
   auto& promise = handle.promise();
-  if (promise.scheduler_) {
-    assert(promise.continuation_ == std::noop_coroutine());
+  if (!promise.continuation_) {
     promise.scheduler_->TaskDone(handle);
+  } else {
+    auto ready = promise.IsReady();
+    promise.SetReady();
+    if (ready) promise.continuation_.resume();
   }
-  return promise.continuation_;
 }
 
 }  // namespace detail
