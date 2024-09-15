@@ -119,9 +119,9 @@ class WriteAwaitableForLT : public IoAwaitableBaseForLT {
 
 class IReadAwaitable : public IoAwaitableBaseForET {
  public:
-  IReadAwaitable(IoEvent* ioEvent, bool connect, void* buf, size_t count)
+  IReadAwaitable(IoEvent* ioEvent, bool canReading, void* buf, size_t count)
       : IoAwaitableBaseForET(ioEvent, true),
-        connected_(connect),
+        canReading_(canReading),
         buf_(buf),
         count_(count) {}
   ~IReadAwaitable() override = default;
@@ -130,7 +130,7 @@ class IReadAwaitable : public IoAwaitableBaseForET {
   virtual ssize_t await_resume() noexcept = 0;
 
  protected:
-  bool connected_;
+  bool canReading_;
   void* buf_;
   size_t count_;
   ssize_t retValue_ = -1;
@@ -138,20 +138,20 @@ class IReadAwaitable : public IoAwaitableBaseForET {
 
 class ReadAwaitableImpl : public IReadAwaitable {
  public:
-  ReadAwaitableImpl(IoEvent* ioEvent, bool connected, void* buf, size_t count)
-      : IReadAwaitable(ioEvent, connected, buf, count) {}
+  ReadAwaitableImpl(IoEvent* ioEvent, bool canReading, void* buf, size_t count)
+      : IReadAwaitable(ioEvent, canReading, buf, count) {}
   ~ReadAwaitableImpl() override = default;
 
   bool await_ready() noexcept override {
-    if (!connected_) return true;
+    if (!canReading_) return true;
     retValue_ = read(ioEvent_->GetFd(), buf_, count_);
     retReady_ = retValue_ >= 0 || (retValue_ == -1 && errno != EAGAIN);
     return retReady_;
   }
 
   ssize_t await_resume() noexcept override {
-    if (!connected_) {  // not connected
-      errno = ENOTCONN;
+    if (!canReading_) {  // not connected
+      errno = ESHUTDOWN;
       return -1;
     } else if (!retReady_) {
       retValue_ = read(ioEvent_->GetFd(), buf_, count_);
@@ -168,12 +168,12 @@ class SSLReadAwaitableImpl;
 
 class ReadAwaitable {
  public:
-  ReadAwaitable(IoEvent* ioEvent, bool connected, void* buf, size_t count,
+  ReadAwaitable(IoEvent* ioEvent, bool canReading, void* buf, size_t count,
                 bool ssl)
-      : impl_(ssl ? std::make_unique<ReadAwaitableImpl>(ioEvent, connected, buf,
-                                                        count)
-                  : std::make_unique<ReadAwaitableImpl>(ioEvent, connected, buf,
-                                                        count)) {}
+      : impl_(ssl ? std::make_unique<ReadAwaitableImpl>(ioEvent, canReading,
+                                                        buf, count)
+                  : std::make_unique<ReadAwaitableImpl>(ioEvent, canReading,
+                                                        buf, count)) {}
   ~ReadAwaitable() = default;
 
   bool await_ready() noexcept { return impl_->await_ready(); }
@@ -188,9 +188,10 @@ class ReadAwaitable {
 
 class IWriteAwaitable : public IoAwaitableBaseForET {
  public:
-  IWriteAwaitable(IoEvent* ioEvent, bool connect, const void* buf, size_t count)
+  IWriteAwaitable(IoEvent* ioEvent, bool canWriting, const void* buf,
+                  size_t count)
       : IoAwaitableBaseForET(ioEvent, false),
-        connected_(connect),
+        canWriting_(canWriting),
         buf_(buf),
         count_(count) {}
   ~IWriteAwaitable() override = default;
@@ -199,7 +200,7 @@ class IWriteAwaitable : public IoAwaitableBaseForET {
   virtual ssize_t await_resume() noexcept = 0;
 
  protected:
-  bool connected_;
+  bool canWriting_;
   const void* buf_;
   size_t count_;
   ssize_t retValue_ = -1;
@@ -207,21 +208,21 @@ class IWriteAwaitable : public IoAwaitableBaseForET {
 
 class WriteAwaitableImpl : public IWriteAwaitable {
  public:
-  WriteAwaitableImpl(IoEvent* ioEvent, bool connected, const void* buf,
+  WriteAwaitableImpl(IoEvent* ioEvent, bool canWriting, const void* buf,
                      size_t count)
-      : IWriteAwaitable(ioEvent, connected, buf, count) {}
+      : IWriteAwaitable(ioEvent, canWriting, buf, count) {}
   ~WriteAwaitableImpl() override = default;
 
   bool await_ready() noexcept override {
-    if (!connected_) return true;
+    if (!canWriting_) return true;
     retValue_ = write(ioEvent_->GetFd(), buf_, count_);
     retReady_ = retValue_ >= 0 || (retValue_ == -1 && errno != EAGAIN);
     return retReady_;
   }
 
   ssize_t await_resume() noexcept override {
-    if (!connected_) {  // not connected
-      errno = ENOTCONN;
+    if (!canWriting_) {  // not connected
+      errno = ESHUTDOWN;
       return -1;
     } else if (!retReady_) {
       retValue_ = write(ioEvent_->GetFd(), buf_, count_);
@@ -239,11 +240,11 @@ class SSLWriteAwaitableImpl;
 
 class WriteAwaitable {
  public:
-  WriteAwaitable(IoEvent* ioEvent, bool connected, const void* buf,
+  WriteAwaitable(IoEvent* ioEvent, bool canWriting, const void* buf,
                  size_t count, bool ssl)
-      : impl_(ssl ? std::make_unique<WriteAwaitableImpl>(ioEvent, connected,
+      : impl_(ssl ? std::make_unique<WriteAwaitableImpl>(ioEvent, canWriting,
                                                          buf, count)
-                  : std::make_unique<WriteAwaitableImpl>(ioEvent, connected,
+                  : std::make_unique<WriteAwaitableImpl>(ioEvent, canWriting,
                                                          buf, count)) {}
   ~WriteAwaitable() = default;
 
@@ -257,31 +258,28 @@ class WriteAwaitable {
   std::unique_ptr<IWriteAwaitable> impl_;
 };
 
-class AcceptrAwaitable : public IoAwaitableBaseForET {
+class AcceptAwaitable : public IoAwaitableBaseForET {
  public:
-  AcceptrAwaitable(IoEvent* ioEvent, int listenFd, sockaddr* addr,
-                   socklen_t* addrlen)
-      : IoAwaitableBaseForET(ioEvent, true),
-        listenFd_(listenFd),
-        addr_(addr),
-        addrlen_(addrlen) {}
-  ~AcceptrAwaitable() override = default;
+  AcceptAwaitable(IoEvent* ioEvent, sockaddr* addr, socklen_t* addrlen)
+      : IoAwaitableBaseForET(ioEvent, true), addr_(addr), addrlen_(addrlen) {}
+  ~AcceptAwaitable() override = default;
 
   bool await_ready() noexcept {
-    retValue_ = accept(listenFd_, addr_, addrlen_);
+    retValue_ = accept4(ioEvent_->GetFd(), addr_, addrlen_,
+                        SOCK_NONBLOCK | SOCK_CLOEXEC);
     retReady_ = retValue_ >= 0 || (retValue_ == -1 && errno != EAGAIN);
     return retReady_;
   }
 
   int await_resume() noexcept {
     if (!retReady_) {
-      retValue_ = accept(listenFd_, addr_, addrlen_);
+      retValue_ = accept4(ioEvent_->GetFd(), addr_, addrlen_,
+                          SOCK_NONBLOCK | SOCK_CLOEXEC);
     }
     return retValue_;
   }
 
  private:
-  int listenFd_;
   sockaddr* addr_;
   socklen_t* addrlen_;
   int retValue_ = -1;
