@@ -21,7 +21,6 @@ class IoAwaitableBaseForET {
 
   IoAwaitableBaseForET(const IoAwaitableBaseForET&) = delete;
   IoAwaitableBaseForET& operator=(const IoAwaitableBaseForET&) = delete;
-
   IoAwaitableBaseForET(IoAwaitableBaseForET&&) = default;
   IoAwaitableBaseForET& operator=(IoAwaitableBaseForET&&) = default;
 
@@ -58,7 +57,6 @@ class IoAwaitableBaseForLT {
 
   IoAwaitableBaseForLT(const IoAwaitableBaseForLT&) = delete;
   IoAwaitableBaseForLT& operator=(const IoAwaitableBaseForLT&) = delete;
-
   IoAwaitableBaseForLT(IoAwaitableBaseForLT&&) = default;
   IoAwaitableBaseForLT& operator=(IoAwaitableBaseForLT&&) = default;
 
@@ -176,6 +174,11 @@ class ReadAwaitable {
                                                         buf, count)) {}
   ~ReadAwaitable() = default;
 
+  ReadAwaitable(const ReadAwaitable&) = delete;
+  ReadAwaitable& operator=(const ReadAwaitable&) = delete;
+  ReadAwaitable(ReadAwaitable&&) = default;
+  ReadAwaitable& operator=(ReadAwaitable&&) = default;
+
   bool await_ready() noexcept { return impl_->await_ready(); }
   void await_suspend(std::coroutine_handle<> handle) noexcept {
     impl_->await_suspend(handle);
@@ -247,6 +250,11 @@ class WriteAwaitable {
                   : std::make_unique<WriteAwaitableImpl>(ioEvent, canWriting,
                                                          buf, count)) {}
   ~WriteAwaitable() = default;
+
+  WriteAwaitable(const WriteAwaitable&) = delete;
+  WriteAwaitable& operator=(const WriteAwaitable&) = delete;
+  WriteAwaitable(WriteAwaitable&&) = default;
+  WriteAwaitable& operator=(WriteAwaitable&&) = default;
 
   bool await_ready() noexcept { return impl_->await_ready(); }
   void await_suspend(std::coroutine_handle<> handle) noexcept {
