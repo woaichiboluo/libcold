@@ -48,9 +48,11 @@ class Acceptor : public TcpSocket {
 
   const IpAddress& GetListenAddr() const { return listenAddr_; }
 
-  Task<TcpSocket> Accept() { co_return co_await Accept(*ioContext_); }
+  [[nodiscard]] Task<TcpSocket> Accept() {
+    co_return co_await Accept(*ioContext_);
+  }
 
-  Task<TcpSocket> Accept(IoContext& context) {
+  [[nodiscard]] Task<TcpSocket> Accept(IoContext& context) {
     assert(listened_);
     sockaddr_in6 addr;
     socklen_t addrLen = sizeof(addr);
