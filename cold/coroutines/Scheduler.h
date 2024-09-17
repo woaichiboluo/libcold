@@ -31,7 +31,8 @@ class Scheduler {
     }
     pendingCoros_.clear();
     for (const auto& handle : completedTasks_) {
-      assert(handle.done());
+      // not always done,when timeout need to remove the task
+      // assert(handle.done());
       assert(tasks_.count(handle));
       tasks_.erase(handle);
     }

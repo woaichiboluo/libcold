@@ -110,6 +110,8 @@ class Task {
     return handle_.promise().Result();
   }
 
+  std::coroutine_handle<promise_type> GetHandle() const { return handle_; }
+
   auto operator co_await() const noexcept {
     assert(handle_);
     return TaskAwaitable(handle_);
