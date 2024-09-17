@@ -72,6 +72,7 @@ class Logger {
   template <typename... Args>
   void Log(LogLevel level, detail::LocationWrapper w,
            fmt::format_string<Args...> fmt, Args &&...args) {
+    if (level < loggerLevel_ && level != LogLevel::FATAL) return;
     LogMessage message;
     message.logTime = Time::Now();
     message.level = level;
