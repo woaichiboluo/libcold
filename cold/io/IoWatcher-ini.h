@@ -47,7 +47,7 @@ inline void IoEvent::DisableAll() {
   watcher_->UpdateIoEvent(this);
 }
 
-inline IoEvent* IoWatcher::TakeIoEvent(int fd) {
+inline IoEvent* detail::IoWatcher::TakeIoEvent(int fd) {
   assert(!ioEvents_.count(fd));
   auto ev = &ioEvents_[fd];
   ev->fd_ = fd;
@@ -55,7 +55,7 @@ inline IoEvent* IoWatcher::TakeIoEvent(int fd) {
   return ev;
 }
 
-inline void IoWatcher::ReturnIoEvent(IoEvent* ev) {
+inline void detail::IoWatcher::ReturnIoEvent(IoEvent* ev) {
   assert(ioEvents_.count(ev->fd_));
   assert(&ioEvents_[ev->fd_] == ev);
   ev->DisableAll();
@@ -68,7 +68,7 @@ inline IoContext& IoEvent::GetIoContext() const {
   return watcher_->GetIoContext();
 }
 
-inline IoWatcher::IoWatcher(IoContext* ioContext)
+inline detail::IoWatcher::IoWatcher(IoContext* ioContext)
     : ioContext_(ioContext),
       epollFd_(epoll_create1(EPOLL_CLOEXEC)),
       wakeUpFd_(eventfd(0, EFD_CLOEXEC)) {
@@ -83,13 +83,13 @@ inline IoWatcher::IoWatcher(IoContext* ioContext)
   TakeIoEvent(wakeUpFd_)->EnableReading();
 }
 
-inline IoWatcher::~IoWatcher() {
+inline detail::IoWatcher::~IoWatcher() {
   ReturnIoEvent(&ioEvents_[wakeUpFd_]);
   close(wakeUpFd_);
   close(epollFd_);
 }
 
-inline void IoWatcher::UpdateIoEvent(IoEvent* ioEvent) {
+inline void detail::IoWatcher::UpdateIoEvent(IoEvent* ioEvent) {
   assert(ioEvents_.count(ioEvent->fd_));
   if (ioEvent->eventsInEpoll_ == 0 && ioEvent->events_ == 0) {
     WARN("update io event with no events. fd: {}", ioEvent->fd_);
@@ -116,22 +116,22 @@ inline void IoWatcher::UpdateIoEvent(IoEvent* ioEvent) {
   ioEvent->eventsInEpoll_ = ioEvent->events_;
 }
 
-inline void IoWatcher::WakeUp() {
+inline void detail::IoWatcher::WakeUp() {
   uint64_t one = 1;
   if (write(wakeUpFd_, &one, sizeof(one)) < 0) {
     ERROR("wake up error. reason: {}", ThisThread::ErrorMsg());
   }
 }
 
-inline void IoWatcher::HandleWakeUp() {
+inline void detail::IoWatcher::HandleWakeUp() {
   uint64_t one = 1;
   if (read(wakeUpFd_, &one, sizeof(one)) < 0) {
     ERROR("handle wake up error. reason: {}", ThisThread::ErrorMsg());
   }
 }
 
-inline void IoWatcher::WatchIo(std::vector<std::coroutine_handle<>>& pending,
-                               int waitMs) {
+inline void detail::IoWatcher::WatchIo(
+    std::vector<std::coroutine_handle<>>& pending, int waitMs) {
   const int ioCnt = epoll_wait(epollFd_, epollEvents_.data(),
                                static_cast<int>(epollEvents_.size()), waitMs);
   if (ioCnt < 0) {

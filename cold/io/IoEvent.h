@@ -8,12 +8,15 @@
 
 namespace Cold {
 
-class IoWatcher;
 class IoContext;
+
+namespace detail {
+class IoWatcher;
+}
 
 class IoEvent {
  public:
-  friend class IoWatcher;
+  friend class detail::IoWatcher;
   IoEvent() = default;
   ~IoEvent() = default;
 
@@ -63,7 +66,7 @@ class IoEvent {
   int fd_ = -1;
   uint32_t events_ = 0;
   uint32_t eventsInEpoll_ = 0;
-  IoWatcher* watcher_ = nullptr;
+  detail::IoWatcher* watcher_ = nullptr;
   std::coroutine_handle<> onRead_;
   std::coroutine_handle<> onWrite_;
 };

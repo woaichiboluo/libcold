@@ -8,6 +8,8 @@
 
 namespace Cold {
 
+namespace detail {
+
 class IoWatcher {
  public:
   IoWatcher(IoContext* ioContext);
@@ -33,6 +35,8 @@ class IoWatcher {
   std::vector<struct epoll_event> epollEvents_;
   std::map<int, IoEvent> ioEvents_;
 };
+
+}  // namespace detail
 
 }  // namespace Cold
 
