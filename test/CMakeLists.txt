@@ -17,3 +17,7 @@ add_executable(IoAwaitableTest IoAwaitableTest.cpp)
 
 add_executable(IpAddressTest IpAddressTest.cpp)
 add_test(name IpAddressTest COMMAND IpAddressTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+add_executable(TimerTest TimerTest.cpp)
+
+add_executable(TimeoutAndSleepTest TimeoutAndSleepTest.cpp)
