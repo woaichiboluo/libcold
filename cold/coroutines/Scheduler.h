@@ -39,8 +39,13 @@ class Scheduler {
     completedTasks_.clear();
   }
 
-  void TaskDone(std::coroutine_handle<> handle) {
+  void TaskPendingDone(std::coroutine_handle<> handle) {
     completedTasks_.push_back(handle);
+  }
+
+  void TaskDone(std::coroutine_handle<> handle) {
+    assert(tasks_.count(handle));
+    tasks_.erase(handle);
   }
 
   // for debug
@@ -67,7 +72,7 @@ void PromiseBase::FinalAwaitable::await_suspend(
     std::coroutine_handle<T> handle) noexcept {
   auto& promise = handle.promise();
   if (!promise.continuation_) {
-    promise.scheduler_->TaskDone(handle);
+    promise.scheduler_->TaskPendingDone(handle);
   } else {
     auto ready = promise.IsReady();
     promise.SetReady();

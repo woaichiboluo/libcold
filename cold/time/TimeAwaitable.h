@@ -9,31 +9,9 @@ namespace Cold {
 
 namespace detail {
 
-template <typename T>
-concept CIsAwaitable = requires(T t) {
-  {t.await_ready()};
-  {t.await_suspend(std::coroutine_handle<>{})};
-  {t.await_resume()};
-};
-
-template <typename T>
-struct IsAwaitable {
-  static constexpr bool value = false;
-  using value_type = typename T::value_type;
-};
-
-template <typename T>
-requires CIsAwaitable<T>
-struct IsAwaitable<T> {
-  static constexpr bool value = true;
-  using value_type = decltype(std::declval<T>().await_resume());
-};
-
-}  // namespace detail
-
 template <typename T, typename REP, typename PERIOOD>
-requires(detail::IsAwaitable<T>::value ||
-         std::is_same_v<T, Task<typename T::value_type>>) class Timeout {
+requires c_RequireBoth<T>
+class Timeout : public detail::AwaitableBase {
  public:
   struct WhenVoidType {};
 
@@ -44,18 +22,14 @@ requires(detail::IsAwaitable<T>::value ||
 
   Timeout(IoContext& context, T&& t,
           std::chrono::duration<REP, PERIOOD> duration) noexcept
-      : context_(&context),
+      : detail::AwaitableBase(&context),
         timeoutContext_(std::make_shared<TimeoutContext>()),
         duration_(duration),
-        timer_(*context_) {
+        timer_(*ioContext_) {
     timeoutContext_->job = std::move(t);
   }
-  ~Timeout() = default;
 
-  Timeout(const Timeout&) = delete;
-  Timeout& operator=(const Timeout&) = delete;
-  Timeout(Timeout&&) = default;
-  Timeout& operator=(Timeout&&) = default;
+  ~Timeout() override = default;
 
   bool await_ready() noexcept { return false; }
 
@@ -78,7 +52,7 @@ requires(detail::IsAwaitable<T>::value ||
       timeoutContext_->timeout = true;
       handle.resume();
     });
-    context_->CoSpawn(std::move(wrapTask));
+    ioContext_->CoSpawn(std::move(wrapTask));
   }
 
   std::pair<bool, ValueType> await_resume() noexcept
@@ -86,7 +60,7 @@ requires(detail::IsAwaitable<T>::value ||
     if (!timeoutContext_->timeout) {
       timer_.Cancel();
     } else {
-      context_->TaskDone(timeoutContext_->handle);
+      ioContext_->TaskDone(timeoutContext_->handle);
     }
     return {timeoutContext_->timeout, timeoutContext_->retValue};
   }
@@ -96,7 +70,7 @@ requires(detail::IsAwaitable<T>::value ||
     if (!timeoutContext_->timeout) {
       timer_.Cancel();
     } else {
-      context_->TaskDone(timeoutContext_->handle);
+      ioContext_->TaskDone(timeoutContext_->handle);
     }
     return timeoutContext_->timeout;
   }
@@ -109,25 +83,20 @@ requires(detail::IsAwaitable<T>::value ||
     std::coroutine_handle<> handle;
   };
 
-  IoContext* context_;
   std::shared_ptr<TimeoutContext> timeoutContext_;
   std::chrono::duration<REP, PERIOOD> duration_;
   Timer timer_;
 };
 
+}  // namespace detail
+
 template <typename REP, typename PERIOD>
-class Sleep {
+class Sleep : public detail::AwaitableBase {
  public:
   Sleep(IoContext& context, std::chrono::duration<REP, PERIOD> duration)
-      : context_(&context), duration_(duration), timer_(context) {}
+      : detail::AwaitableBase(&context), duration_(duration), timer_(context) {}
 
-  ~Sleep() = default;
-
-  Sleep(const Sleep&) = delete;
-  Sleep& operator=(const Sleep&) = delete;
-
-  Sleep(Sleep&&) = default;
-  Sleep& operator=(Sleep&&) = default;
+  ~Sleep() override = default;
 
   bool await_ready() noexcept { return false; }
 
@@ -139,7 +108,6 @@ class Sleep {
   void await_resume() noexcept {}
 
  private:
-  IoContext* context_;
   std::chrono::duration<REP, PERIOD> duration_;
   Timer timer_;
 };

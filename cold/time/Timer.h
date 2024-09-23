@@ -97,16 +97,13 @@ class Timer {
 };
 
 template <typename T>
-struct Timer::TimerAwaitable {
+struct Timer::TimerAwaitable : public detail::AwaitableBase {
  public:
   TimerAwaitable(Timer* timer, Task<T> task)
-      : timer_(timer), task_(std::move(task)) {}
+      : detail::AwaitableBase(&timer->GetIoContext()),
+        timer_(timer),
+        task_(std::move(task)) {}
   ~TimerAwaitable() = default;
-
-  TimerAwaitable(const TimerAwaitable&) = delete;
-  TimerAwaitable& operator=(const TimerAwaitable&) = delete;
-  TimerAwaitable(TimerAwaitable&&) = default;
-  TimerAwaitable& operator=(TimerAwaitable&&) = default;
 
   bool await_ready() noexcept { return false; }
 
@@ -133,11 +130,6 @@ struct Timer::TimerAwaitable<void> {
   TimerAwaitable(Timer* timer, Task<> task)
       : timer_(timer), task_(std::move(task)) {}
   ~TimerAwaitable() = default;
-
-  TimerAwaitable(const TimerAwaitable&) = delete;
-  TimerAwaitable& operator=(const TimerAwaitable&) = delete;
-  TimerAwaitable(TimerAwaitable&&) = default;
-  TimerAwaitable& operator=(TimerAwaitable&&) = default;
 
   bool await_ready() noexcept { return false; }
 

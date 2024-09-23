@@ -3,6 +3,7 @@
 
 #include <sys/signal.h>
 
+#include "../time/TimeAwaitable.h"
 #include "../time/TimerQueue.h"
 #include "IoContext.h"
 #include "IoWatcher-ini.h"
@@ -77,6 +78,10 @@ inline void IoContext::CoSpawn(Task<> task) {
   ioWatcher_->WakeUp();
 }
 
+inline void IoContext::TaskPendingDone(std::coroutine_handle<> handle) {
+  scheduler_->TaskPendingDone(handle);
+}
+
 inline void IoContext::TaskDone(std::coroutine_handle<> handle) {
   scheduler_->TaskDone(handle);
 }
@@ -99,6 +104,13 @@ inline void IoContext::CancelTimer(Timer* timer) {
   std::lock_guard lock(mutexForTimerQueue_);
   assert(timerQueue_);
   timerQueue_->CancelTimer(timer);
+}
+
+template <typename T, typename REP, typename PERIOD>
+detail::Timeout<T, REP, PERIOD> IoContext::Timeout(
+    T&& value, std::chrono::duration<REP, PERIOD> duration) {
+  return detail::Timeout<T, REP, PERIOD>(*this, std::forward<T>(value),
+                                         duration);
 }
 
 }  // namespace Cold

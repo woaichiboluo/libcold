@@ -69,6 +69,10 @@ class IpAddress {
     return reinterpret_cast<const struct sockaddr*>(&ipv6Addr_);
   }
 
+  socklen_t GetSocklen() const {
+    return IsIpv4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
+  }
+
   struct sockaddr* GetSockaddr() {
     return reinterpret_cast<struct sockaddr*>(&ipv6Addr_);
   }

@@ -24,22 +24,41 @@ class TcpSocket : public BasicSocket {
   TcpSocket(TcpSocket&&) = default;
   TcpSocket& operator=(TcpSocket&&) = default;
 
+  Task<bool> Connect(const IpAddress& address) {
+    assert(IsValid());
+    if (co_await BasicSocket::Connect(address) == 0) {
+      event_->EnableReadingET();
+      co_return true;
+    }
+    co_return false;
+  }
+
   bool TcpNoDelay(bool enable) {
     int flag = enable ? 1 : 0;
     return setsockopt(event_->GetFd(), IPPROTO_TCP, TCP_NODELAY, &flag,
                       sizeof(flag)) == 0;
   }
 
-  [[nodiscard]] detail::ReadAwaitable Read(void* buffer, size_t size) {
+  [[nodiscard]] Task<ssize_t> Read(void* buffer, size_t size) {
     assert(IsValid() && IsConnected());
-    return detail::ReadAwaitable(event_, CanReading(), buffer, size,
-                                 sslEnabled_);
+    if (sslEnabled_) {
+      co_return co_await detail::ReadAwaitable(event_, CanReading(), buffer,
+                                               size);
+    } else {
+      co_return co_await detail::ReadAwaitable(event_, CanReading(), buffer,
+                                               size);
+    }
   }
 
-  [[nodiscard]] detail::WriteAwaitable Write(const void* buffer, size_t size) {
+  [[nodiscard]] Task<ssize_t> Write(const void* buffer, size_t size) {
     assert(IsValid() && IsConnected());
-    return detail::WriteAwaitable(event_, CanWriting(), buffer, size,
-                                  sslEnabled_);
+    if (sslEnabled_) {
+      co_return co_await detail::WriteAwaitable(event_, CanWriting(), buffer,
+                                                size);
+    } else {
+      co_return co_await detail::WriteAwaitable(event_, CanWriting(), buffer,
+                                                size);
+    }
   }
 
   [[nodiscard]] Task<ssize_t> ReadN(void* buffer, size_t size) {
@@ -64,6 +83,8 @@ class TcpSocket : public BasicSocket {
     }
     co_return static_cast<ssize_t>(size);
   }
+
+  void EnableSSL() { sslEnabled_ = true; }
 
  protected:
   bool sslEnabled_ = false;

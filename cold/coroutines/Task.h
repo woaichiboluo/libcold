@@ -8,6 +8,7 @@
 namespace Cold {
 
 class Scheduler;
+class IoContext;
 
 template <typename T = void>
 class Task;
@@ -78,6 +79,7 @@ template <typename T>
 class Task {
  public:
   friend class Scheduler;
+  friend class IoContext;
 
   using promise_type = detail::TaskPromise<T>;
   using value_type = T;

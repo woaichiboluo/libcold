@@ -7,22 +7,23 @@
 
 #include <memory>
 
+#include "../coroutines/AwaitableBase.h"
 #include "IoEvent.h"
 
 namespace Cold::detail {
 
 // for non-blocking io
 // mainly for the socket
-class IoAwaitableBaseForET {
+class IoAwaitableBaseForET : public AwaitableBase {
  public:
   IoAwaitableBaseForET(IoEvent* ioEvent, bool ioForRead) noexcept
-      : ioEvent_(ioEvent), ioForRead_(ioForRead) {}
-  virtual ~IoAwaitableBaseForET() = default;
+      : AwaitableBase(&ioEvent->GetIoContext()),
+        ioEvent_(ioEvent),
+        ioForRead_(ioForRead) {}
 
-  IoAwaitableBaseForET(const IoAwaitableBaseForET&) = delete;
-  IoAwaitableBaseForET& operator=(const IoAwaitableBaseForET&) = delete;
-  IoAwaitableBaseForET(IoAwaitableBaseForET&&) = default;
-  IoAwaitableBaseForET& operator=(IoAwaitableBaseForET&&) = default;
+  virtual ~IoAwaitableBaseForET() {
+    if (isPendingIO_) OnTimeout();
+  }
 
   void await_suspend(std::coroutine_handle<> handle) noexcept {
     if (ioForRead_) {
@@ -31,34 +32,36 @@ class IoAwaitableBaseForET {
       ioEvent_->SetOnWriteCoroutine(handle);
       ioEvent_->EnableWritingET();
     }
+    isPendingIO_ = true;
   }
 
-  void OnTimeout() {
+  void OnTimeout() noexcept {
     if (ioForRead_) {
       ioEvent_->ClearReadCoroutine();
     } else {
-      ioEvent_->ClearWriteCoroutine();
+      ioEvent_->DisableWriting();
     }
+    isPendingIO_ = false;
   }
 
  protected:
   IoEvent* ioEvent_;
   bool ioForRead_;
+  bool isPendingIO_ = false;
 };
 
 // for blocking non-blocking io
 // so when await_ready,always watch the io event
 // when solve the file and stdio, we use the blocking io,so use LT mode
-class IoAwaitableBaseForLT {
+class IoAwaitableBaseForLT : public AwaitableBase {
  public:
   IoAwaitableBaseForLT(IoEvent* ioEvent, bool read)
-      : ioEvent_(ioEvent), ioForRead_(read) {}
-  virtual ~IoAwaitableBaseForLT() = default;
-
-  IoAwaitableBaseForLT(const IoAwaitableBaseForLT&) = delete;
-  IoAwaitableBaseForLT& operator=(const IoAwaitableBaseForLT&) = delete;
-  IoAwaitableBaseForLT(IoAwaitableBaseForLT&&) = default;
-  IoAwaitableBaseForLT& operator=(IoAwaitableBaseForLT&&) = default;
+      : AwaitableBase(&ioEvent->GetIoContext()),
+        ioEvent_(ioEvent),
+        ioForRead_(read) {}
+  virtual ~IoAwaitableBaseForLT() {
+    if (isPendingIO_) OnTimeout();
+  }
 
   bool await_ready() noexcept { return false; }
 
@@ -70,19 +73,22 @@ class IoAwaitableBaseForLT {
       ioEvent_->SetOnWriteCoroutine(handle);
       ioEvent_->EnableWriting();
     }
+    isPendingIO_ = true;
   }
 
-  void OnTimeout() {
+  void OnTimeout() noexcept {
     if (ioForRead_) {
       ioEvent_->DisableReading();
     } else {
       ioEvent_->DisableWriting();
     }
+    isPendingIO_ = false;
   }
 
  protected:
   IoEvent* ioEvent_;
   bool ioForRead_;
+  bool isPendingIO_ = false;
 };
 
 class ReadAwaitableForLT : public IoAwaitableBaseForLT {
@@ -92,6 +98,7 @@ class ReadAwaitableForLT : public IoAwaitableBaseForLT {
   ~ReadAwaitableForLT() override = default;
 
   ssize_t await_resume() noexcept {
+    isPendingIO_ = false;
     return read(ioEvent_->GetFd(), buf_, count_);
   }
 
@@ -107,6 +114,7 @@ class WriteAwaitableForLT : public IoAwaitableBaseForLT {
   ~WriteAwaitableForLT() override = default;
 
   ssize_t await_resume() noexcept {
+    isPendingIO_ = false;
     return write(ioEvent_->GetFd(), buf_, count_);
   }
 
@@ -115,39 +123,24 @@ class WriteAwaitableForLT : public IoAwaitableBaseForLT {
   size_t count_;
 };
 
-class IReadAwaitable : public IoAwaitableBaseForET {
+class ReadAwaitable : public IoAwaitableBaseForET {
  public:
-  IReadAwaitable(IoEvent* ioEvent, bool canReading, void* buf, size_t count)
+  ReadAwaitable(IoEvent* ioEvent, bool canReading, void* buf, size_t count)
       : IoAwaitableBaseForET(ioEvent, true),
         canReading_(canReading),
         buf_(buf),
         count_(count) {}
-  ~IReadAwaitable() override = default;
+  ~ReadAwaitable() override = default;
 
-  virtual bool await_ready() noexcept = 0;
-  virtual ssize_t await_resume() noexcept = 0;
-
- protected:
-  bool canReading_;
-  void* buf_;
-  size_t count_;
-  ssize_t retValue_ = -1;
-};
-
-class ReadAwaitableImpl : public IReadAwaitable {
- public:
-  ReadAwaitableImpl(IoEvent* ioEvent, bool canReading, void* buf, size_t count)
-      : IReadAwaitable(ioEvent, canReading, buf, count) {}
-  ~ReadAwaitableImpl() override = default;
-
-  bool await_ready() noexcept override {
+  bool await_ready() noexcept {
     if (!canReading_) return true;
     retValue_ = read(ioEvent_->GetFd(), buf_, count_);
     retReady_ = retValue_ >= 0 || (retValue_ == -1 && errno != EAGAIN);
     return retReady_;
   }
 
-  ssize_t await_resume() noexcept override {
+  ssize_t await_resume() noexcept {
+    isPendingIO_ = false;
     if (!canReading_) {  // not connected
       errno = ESHUTDOWN;
       return -1;
@@ -158,72 +151,28 @@ class ReadAwaitableImpl : public IReadAwaitable {
   }
 
  private:
+  bool canReading_;
+  void* buf_;
+  size_t count_;
+  ssize_t retValue_ = -1;
   bool retReady_ = false;
 };
 
-// FIXME implement it later
-class SSLReadAwaitableImpl;
-
-class ReadAwaitable {
+class WriteAwaitable : public IoAwaitableBaseForET {
  public:
-  ReadAwaitable(IoEvent* ioEvent, bool canReading, void* buf, size_t count,
-                bool ssl)
-      : impl_(ssl ? std::make_unique<ReadAwaitableImpl>(ioEvent, canReading,
-                                                        buf, count)
-                  : std::make_unique<ReadAwaitableImpl>(ioEvent, canReading,
-                                                        buf, count)) {}
-  ~ReadAwaitable() = default;
+  WriteAwaitable(IoEvent* ioEvent, bool canWriting, const void* buf,
+                 size_t count)
+      : IoAwaitableBaseForET(ioEvent, false) {}
+  ~WriteAwaitable() override = default;
 
-  ReadAwaitable(const ReadAwaitable&) = delete;
-  ReadAwaitable& operator=(const ReadAwaitable&) = delete;
-  ReadAwaitable(ReadAwaitable&&) = default;
-  ReadAwaitable& operator=(ReadAwaitable&&) = default;
-
-  bool await_ready() noexcept { return impl_->await_ready(); }
-  void await_suspend(std::coroutine_handle<> handle) noexcept {
-    impl_->await_suspend(handle);
-  }
-  ssize_t await_resume() noexcept { return impl_->await_resume(); }
-
- private:
-  std::unique_ptr<IReadAwaitable> impl_;
-};
-
-class IWriteAwaitable : public IoAwaitableBaseForET {
- public:
-  IWriteAwaitable(IoEvent* ioEvent, bool canWriting, const void* buf,
-                  size_t count)
-      : IoAwaitableBaseForET(ioEvent, false),
-        canWriting_(canWriting),
-        buf_(buf),
-        count_(count) {}
-  ~IWriteAwaitable() override = default;
-
-  virtual bool await_ready() noexcept = 0;
-  virtual ssize_t await_resume() noexcept = 0;
-
- protected:
-  bool canWriting_;
-  const void* buf_;
-  size_t count_;
-  ssize_t retValue_ = -1;
-};
-
-class WriteAwaitableImpl : public IWriteAwaitable {
- public:
-  WriteAwaitableImpl(IoEvent* ioEvent, bool canWriting, const void* buf,
-                     size_t count)
-      : IWriteAwaitable(ioEvent, canWriting, buf, count) {}
-  ~WriteAwaitableImpl() override = default;
-
-  bool await_ready() noexcept override {
+  bool await_ready() noexcept {
     if (!canWriting_) return true;
     retValue_ = write(ioEvent_->GetFd(), buf_, count_);
     retReady_ = retValue_ >= 0 || (retValue_ == -1 && errno != EAGAIN);
     return retReady_;
   }
 
-  ssize_t await_resume() noexcept override {
+  ssize_t await_resume() noexcept {
     if (!canWriting_) {  // not connected
       errno = ESHUTDOWN;
       return -1;
@@ -235,35 +184,11 @@ class WriteAwaitableImpl : public IWriteAwaitable {
   }
 
  private:
+  bool canWriting_;
+  const void* buf_;
+  size_t count_;
+  ssize_t retValue_ = -1;
   bool retReady_ = false;
-};
-
-// FIXME implement it later
-class SSLWriteAwaitableImpl;
-
-class WriteAwaitable {
- public:
-  WriteAwaitable(IoEvent* ioEvent, bool canWriting, const void* buf,
-                 size_t count, bool ssl)
-      : impl_(ssl ? std::make_unique<WriteAwaitableImpl>(ioEvent, canWriting,
-                                                         buf, count)
-                  : std::make_unique<WriteAwaitableImpl>(ioEvent, canWriting,
-                                                         buf, count)) {}
-  ~WriteAwaitable() = default;
-
-  WriteAwaitable(const WriteAwaitable&) = delete;
-  WriteAwaitable& operator=(const WriteAwaitable&) = delete;
-  WriteAwaitable(WriteAwaitable&&) = default;
-  WriteAwaitable& operator=(WriteAwaitable&&) = default;
-
-  bool await_ready() noexcept { return impl_->await_ready(); }
-  void await_suspend(std::coroutine_handle<> handle) noexcept {
-    impl_->await_suspend(handle);
-  }
-  ssize_t await_resume() noexcept { return impl_->await_resume(); }
-
- private:
-  std::unique_ptr<IWriteAwaitable> impl_;
 };
 
 class AcceptAwaitable : public IoAwaitableBaseForET {
@@ -287,15 +212,49 @@ class AcceptAwaitable : public IoAwaitableBaseForET {
     return retValue_;
   }
 
- private:
   sockaddr* addr_;
   socklen_t* addrlen_;
   int retValue_ = -1;
   bool retReady_ = false;
 };
 
-// FIXME implement it later
+class ConnectAwaitable : public IoAwaitableBaseForET {
+ public:
+  ConnectAwaitable(IoEvent* ioEvent, const sockaddr* addr, socklen_t addrlen)
+      : IoAwaitableBaseForET(ioEvent, false), addr_(addr), addrlen_(addrlen) {}
+  ~ConnectAwaitable() override = default;
+
+  bool await_ready() noexcept {
+    retValue_ = connect(ioEvent_->GetFd(), addr_, addrlen_);
+    inProgress_ = retValue_ == -1 && errno == EINPROGRESS;
+    retReady_ = retValue_ == 0 || (retValue_ == -1 && errno != EINPROGRESS);
+    return retReady_;
+  }
+
+  int await_resume() noexcept {
+    if (inProgress_) {
+      assert(retValue_ == -1);
+      socklen_t len = sizeof(int);
+      if (getsockopt(ioEvent_->GetFd(), SOL_SOCKET, SO_ERROR, &retValue_,
+                     &len) == 0) {
+        errno = retValue_;
+      }
+    }
+    return retValue_;
+  }
+
+ private:
+  const sockaddr* addr_;
+  socklen_t addrlen_;
+  int retValue_ = -1;
+  bool retReady_ = false;
+  bool inProgress_ = false;
+};
+
+// FIME implement it later
 class HandleShakeAwaitable;
+class SSLWriteAwaitable;
+class SSLReadAwaitableImpl;
 
 }  // namespace Cold::detail
 

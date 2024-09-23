@@ -29,13 +29,15 @@ inline void IoEvent::EnableWritingET() {
 }
 
 inline void IoEvent::DisableReading() {
-  events_ &= (~EPOLLIN | ~EPOLLET);
+  events_ &= ~EPOLLIN;
+  events_ &= ~EPOLLET;
   onWrite_ = std::coroutine_handle<>();
   watcher_->UpdateIoEvent(this);
 }
 
 inline void IoEvent::DisableWriting() {
-  events_ &= (~EPOLLOUT | ~EPOLLET);
+  events_ &= ~EPOLLOUT;
+  events_ &= ~EPOLLET;
   onWrite_ = std::coroutine_handle<>();
   watcher_->UpdateIoEvent(this);
 }
@@ -92,11 +94,11 @@ inline detail::IoWatcher::~IoWatcher() {
 inline void detail::IoWatcher::UpdateIoEvent(IoEvent* ioEvent) {
   assert(ioEvents_.count(ioEvent->fd_));
   if (ioEvent->eventsInEpoll_ == 0 && ioEvent->events_ == 0) {
-    WARN("update io event with no events. fd: {}", ioEvent->fd_);
     return;
   }
   if (ioEvent->eventsInEpoll_ == ioEvent->events_) {
-    ERROR("update io event with same events. fd: {}", ioEvent->fd_);
+    ERROR("update io event with same events. fd: {} ev: {}", ioEvent->fd_,
+          ioEvent->DumpEvents());
     return;
   }
   struct epoll_event ev;

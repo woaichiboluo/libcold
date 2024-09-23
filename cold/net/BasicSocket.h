@@ -143,6 +143,19 @@ class BasicSocket {
                       sizeof(opt)) == 0;
   }
 
+  Task<int> Connect(const IpAddress& addr) {
+    auto ret = co_await detail::ConnectAwaitable(event_, addr.GetSockaddr(),
+                                                 addr.GetSocklen());
+    if (ret == 0) {
+      connected_ = true;
+      remoteAddress_ = addr;
+      // get local addr
+      socklen_t len = sizeof(struct sockaddr_in6);
+      getsockname(event_->GetFd(), localAddress_.GetSockaddr(), &len);
+    }
+    co_return ret;
+  }
+
  protected:
   IoContext* ioContext_ = nullptr;
   IoEvent* event_ = nullptr;
