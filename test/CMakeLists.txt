@@ -1,23 +1,30 @@
 include_directories(${CMAKE_SOURCE_DIR})
 
-add_executable(TimeTest TimeTest.cpp)
+# time
+add_executable(TimeTest time/TimeTest.cpp)
 add_test(NAME TimeTest COMMAND TimeTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-add_executable(LogFormatterTest LogFormatterTest.cpp)
+add_executable(TimerTest time/TimerTest.cpp)
+
+add_executable(TimeoutAndSleepTest time/TimeoutAndSleepTest.cpp)
+
+# log
+add_executable(LogFormatterTest log/LogFormatterTest.cpp)
 add_test(NAME LogFormatterTest COMMAND LogFormatterTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-add_executable(LoggerTest LoggerTest.cpp)
+add_executable(LoggerTest log/LoggerTest.cpp)
 
-add_executable(LogSinkTest LogSinkTest.cpp)
+add_executable(LogSinkTest log/LogSinkTest.cpp)
 
-add_executable(TaskTest TaskTest.cpp)
+# coro
+add_executable(TaskTest coro/TaskTest.cpp)
 add_test(NAME TaskTest COMMAND TaskTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-add_executable(IoAwaitableTest IoAwaitableTest.cpp)
+# net
+add_executable(AcceptorTest net/AcceptorTest.cpp)
 
-add_executable(IpAddressTest IpAddressTest.cpp)
+add_executable(IpAddressTest net/IpAddressTest.cpp)
 add_test(name IpAddressTest COMMAND IpAddressTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-add_executable(TimerTest TimerTest.cpp)
 
-add_executable(TimeoutAndSleepTest TimeoutAndSleepTest.cpp)
+add_executable(ConnectTest net/ConnectTest.cpp)

@@ -29,7 +29,7 @@ Task<> TestTimeout1(IoContext& ioContext) {
 // timeout
 Task<> DoTimeout(IoContext& ioContext) {
   INFO("Begin test timeout (should be timeout)");
-  auto value = co_await Timeout(ioContext, TestTimeout(ioContext), 3s);
+  auto value = co_await ioContext.Timeout(TestTimeout(ioContext), 3s);
   INFO("with timeout job return. timeout: {}", value);
   ioContext.CoSpawn(DoTimeout1(ioContext));
 }
@@ -37,7 +37,7 @@ Task<> DoTimeout(IoContext& ioContext) {
 // not timeout
 Task<> DoTimeout1(IoContext& ioContext) {
   INFO("Begin test timeout (should be not timeout)");
-  auto value = co_await Timeout(ioContext, TestTimeout1(ioContext), 6s);
+  auto value = co_await ioContext.Timeout(TestTimeout1(ioContext), 6s);
   INFO("with timeout job return. timeout: {}", value);
   ioContext.Stop();
 }
