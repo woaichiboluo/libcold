@@ -5,8 +5,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <memory>
-
 #include "../coroutines/AwaitableBase.h"
 #include "IoEvent.h"
 
@@ -162,7 +160,10 @@ class WriteAwaitable : public IoAwaitableBaseForET {
  public:
   WriteAwaitable(IoEvent* ioEvent, bool canWriting, const void* buf,
                  size_t count)
-      : IoAwaitableBaseForET(ioEvent, false) {}
+      : IoAwaitableBaseForET(ioEvent, false),
+        canWriting_(canWriting),
+        buf_(buf),
+        count_(count) {}
   ~WriteAwaitable() override = default;
 
   bool await_ready() noexcept {
@@ -173,6 +174,7 @@ class WriteAwaitable : public IoAwaitableBaseForET {
   }
 
   ssize_t await_resume() noexcept {
+    isPendingIO_ = false;
     if (!canWriting_) {  // not connected
       errno = ESHUTDOWN;
       return -1;
@@ -205,6 +207,7 @@ class AcceptAwaitable : public IoAwaitableBaseForET {
   }
 
   int await_resume() noexcept {
+    isPendingIO_ = false;
     if (!retReady_) {
       retValue_ = accept4(ioEvent_->GetFd(), addr_, addrlen_,
                           SOCK_NONBLOCK | SOCK_CLOEXEC);
@@ -232,6 +235,7 @@ class ConnectAwaitable : public IoAwaitableBaseForET {
   }
 
   int await_resume() noexcept {
+    isPendingIO_ = false;
     if (inProgress_) {
       assert(retValue_ == -1);
       socklen_t len = sizeof(int);
