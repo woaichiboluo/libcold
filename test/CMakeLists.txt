@@ -26,5 +26,6 @@ add_executable(AcceptorTest net/AcceptorTest.cpp)
 add_executable(IpAddressTest net/IpAddressTest.cpp)
 add_test(name IpAddressTest COMMAND IpAddressTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-
 add_executable(ConnectTest net/ConnectTest.cpp)
+
+add_executable(ReadWriteTest net/ReadWriteTest.cpp)
