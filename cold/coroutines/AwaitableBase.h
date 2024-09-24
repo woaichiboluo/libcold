@@ -54,6 +54,22 @@ struct IsAwaitable<T> {
 template <typename T>
 concept c_RequireBoth = c_IsAwaitable<T> || c_IsTask<T>;
 
+template <typename T>
+concept c_HasTimeout = requires(T t) {
+  {t.OnTimeout()};
+};
+
+template <typename T>
+struct HasTimeout {
+  static constexpr bool value = false;
+};
+
+template <typename T>
+requires c_HasTimeout<T>
+struct HasTimeout<T> {
+  static constexpr bool value = true;
+};
+
 }  // namespace detail
 
 }  // namespace Cold

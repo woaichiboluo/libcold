@@ -46,7 +46,7 @@ class Timeout : public detail::AwaitableBase {
     timeoutContext_->handle = wrapTask.GetHandle();
     timer_.ExpiresAfter(duration_);
     timer_.AsyncWait([&, handle]() {
-      if constexpr (requires { timeoutContext_->job.OnTimeout(); }) {
+      if constexpr (HasTimeout<T>::value) {
         timeoutContext_->job.OnTimeout();
       }
       timeoutContext_->timeout = true;
