@@ -1,6 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "cold/Coro.h"
+#include "cold/Cold.h"
 #include "third_party/doctest.h"
 
 using Cold::Scheduler;
@@ -15,12 +15,12 @@ TEST_CASE("Test Resume Task") {
   CHECK(value == 0);
   CHECK(!task.Done());
   Scheduler s;
-  s.CoSpawn(std::move(task));
-  CHECK(s.GetTasksSize() == 1);
+  s.CoSpawn(task.Release());
+  CHECK(s.GetAllCoroSize() == 1);
   CHECK(s.GetPendingCorosSize() == 1);
   CHECK(task.Done());  // after move become null handle
   s.DoSchedule();
-  CHECK(s.GetTasksSize() == 0);
+  CHECK(s.GetAllCoroSize() == 0);
   CHECK(s.GetPendingCorosSize() == 0);
   CHECK(value == 100);
 }
@@ -60,11 +60,11 @@ TEST_CASE("Test Nested tasks") {
   auto coro = []() -> Task<> { co_await Co3(); }();
   CHECK(coro.Done() == false);
   Scheduler s;
-  s.CoSpawn(std::move(coro));
-  CHECK(s.GetTasksSize() == 1);
+  s.CoSpawn(coro.Release());
+  CHECK(s.GetAllCoroSize() == 1);
   CHECK(s.GetPendingCorosSize() == 1);
   s.DoSchedule();
-  CHECK(s.GetTasksSize() == 0);
+  CHECK(s.GetAllCoroSize() == 0);
   CHECK(s.GetPendingCorosSize() == 0);
   CHECK(coro.Done());
 }
@@ -88,13 +88,13 @@ TEST_CASE("Test move task") {
 
   Scheduler s;
 
-  s.CoSpawn(std::move(c));
+  s.CoSpawn(c.Release());
   CHECK(c.Done());
   CHECK(coro.Done());
-  CHECK(s.GetTasksSize() == 1);
+  CHECK(s.GetAllCoroSize() == 1);
   CHECK(s.GetPendingCorosSize() == 1);
   s.DoSchedule();
-  CHECK(s.GetTasksSize() == 0);
+  CHECK(s.GetAllCoroSize() == 0);
   CHECK(s.GetPendingCorosSize() == 0);
   CHECK(value == 666);
 }
@@ -140,10 +140,10 @@ TEST_CASE("Test task return value") {
                                               std::move(strviewCoro),
                                               std::move(vectorCoro));
   Scheduler s;
-  s.CoSpawn(std::move(coro));
-  CHECK(s.GetTasksSize() == 1);
+  s.CoSpawn(coro.Release());
+  CHECK(s.GetAllCoroSize() == 1);
   CHECK(s.GetPendingCorosSize() == 1);
   s.DoSchedule();
-  CHECK(s.GetTasksSize() == 0);
+  CHECK(s.GetAllCoroSize() == 0);
   CHECK(s.GetPendingCorosSize() == 0);
 }

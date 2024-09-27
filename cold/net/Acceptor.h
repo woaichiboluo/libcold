@@ -35,13 +35,22 @@ class Acceptor : public TcpSocket {
 
   void EnableSSL() { sslEnabled_ = true; }
 
+  void ReusePort(bool reuse) {
+    int opt = reuse ? 1 : 0;
+    if (setsockopt(event_->GetFd(), SOL_SOCKET, SO_REUSEPORT, &opt,
+                   sizeof(opt)) < 0) {
+      FATAL("setsockopt SO_REUSEPORT error. fd: {}. reason: {}",
+            event_->GetFd(), ThisThread::ErrorMsg());
+    }
+  }
+
   void Listen() {
     if (listen(event_->GetFd(), SOMAXCONN) < 0) {
       FATAL("listen error. fd: {}. reason: {}", event_->GetFd(),
             ThisThread::ErrorMsg());
     }
     listened_ = true;
-    event_->EnableReadingET();
+    event_->EnableReading(true);
   }
 
   bool IsListened() const { return listened_; }
@@ -56,25 +65,32 @@ class Acceptor : public TcpSocket {
     assert(listened_);
     sockaddr_in6 addr;
     socklen_t addrLen = sizeof(addr);
-    auto connfd = co_await detail::AcceptAwaitable(
-        event_, reinterpret_cast<struct sockaddr*>(&addr), &addrLen);
-    if (connfd >= 0) {
-      auto ev = context.TakeIoEvent(connfd);
-      auto socket = TcpSocket(ev);
-      socket.SetLocalAddress(localAddress_);
-      socket.SetRemoteAddress(IpAddress(addr));
-      co_return socket;
-    } else {
-      if (errno == EMFILE) {
-        close(idleFd_);
-        idleFd_ = accept(event_->GetFd(), nullptr, nullptr);
-        close(idleFd_);
-        idleFd_ = open("/dev/null", O_RDONLY | O_CLOEXEC);
+    while (true) {
+      auto sockfd = accept4(event_->GetFd(), reinterpret_cast<sockaddr*>(&addr),
+                            &addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
+      if (sockfd >= 0) {
+        auto ev = context.TakeIoEvent(sockfd);
+        auto socket = TcpSocket(ev);
+        socket.SetLocalAddress(localAddress_);
+        socket.SetRemoteAddress(IpAddress(addr));
+        co_return socket;
       } else {
-        ERROR("Accept Error. errno: {}. reason: {}", errno,
-              ThisThread::ErrorMsg());
+        if (errno == EMFILE) {
+          close(idleFd_);
+          while ((idleFd_ = accept(event_->GetFd(), nullptr, nullptr)) < 0) {
+            co_await Detail::ReadIoAwaitable(event_, false);
+          }
+          close(idleFd_);
+          idleFd_ = open("/dev/null", O_RDONLY | O_CLOEXEC);
+        } else if (errno == EAGAIN) {
+          co_await Detail::ReadIoAwaitable(event_, false);
+          continue;
+        } else {
+          ERROR("Accept Error. errno: {}. reason: {}", errno,
+                ThisThread::ErrorMsg());
+        }
+        co_return TcpSocket();
       }
-      co_return TcpSocket();
     }
   }
 

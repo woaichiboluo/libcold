@@ -9,7 +9,7 @@
 
 namespace Cold {
 
-namespace detail {
+namespace Detail {
 
 struct LocationWrapper {
   constexpr LocationWrapper(
@@ -26,7 +26,7 @@ struct LocationWrapper {
   std::string_view baseName;
 };
 
-}  // namespace detail
+}  // namespace Detail
 
 class Logger {
  public:
@@ -70,7 +70,7 @@ class Logger {
   }
 
   template <typename... Args>
-  void Log(LogLevel level, detail::LocationWrapper w,
+  void Log(LogLevel level, Detail::LocationWrapper w,
            fmt::format_string<Args...> fmt, Args &&...args) {
     if (level < loggerLevel_ && level != LogLevel::FATAL) return;
     LogMessage message;

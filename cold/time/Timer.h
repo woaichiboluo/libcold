@@ -4,20 +4,19 @@
 #include <atomic>
 #include <functional>
 
-#include "../Coro.h"
-#include "../io/IoContext.h"
+#include "../coroutines/Task.h"
 #include "Time.h"
 
 namespace Cold {
 
 class IoContext;
 
-namespace detail {
+namespace Detail {
 class TimerQueue;
 }
 
 class Timer {
-  friend class detail::TimerQueue;
+  friend class Detail::TimerQueue;
 
  public:
   explicit Timer(IoContext& context) : context_(&context) {
@@ -53,11 +52,7 @@ class Timer {
   Time GetExpiry() const { return expiry_; }
   size_t GetTimerId() const { return timerId_; }
 
-  void Cancel() {
-    if (timerId_ != 0) {
-      context_->CancelTimer(this);
-    }
-  }
+  void Cancel();
 
   template <typename REP, typename PERIOD>
   void ExpiresAfter(std::chrono::duration<REP, PERIOD> duration) {
@@ -66,7 +61,7 @@ class Timer {
 
   void ExpiresAt(Time time) {
     expiry_ = time;
-    context_->UpdateTimer(this);
+    Update();
   }
 
   void AsyncWait(std::function<void()> func) {
@@ -78,7 +73,7 @@ class Timer {
 
   void AsyncWait(Task<> task) {
     task_ = std::move(task);
-    context_->AddTimer(this);
+    Add();
   }
 
   template <typename T>
@@ -90,6 +85,9 @@ class Timer {
   }
 
  private:
+  void Add();
+  void Update();
+
   IoContext* context_;
   size_t timerId_ = 0;
   Time expiry_;
@@ -97,12 +95,10 @@ class Timer {
 };
 
 template <typename T>
-struct Timer::TimerAwaitable : public detail::AwaitableBase {
+struct Timer::TimerAwaitable {
  public:
   TimerAwaitable(Timer* timer, Task<T> task)
-      : detail::AwaitableBase(&timer->GetIoContext()),
-        timer_(timer),
-        task_(std::move(task)) {}
+      : timer_(timer), task_(std::move(task)) {}
   ~TimerAwaitable() = default;
 
   bool await_ready() noexcept { return false; }

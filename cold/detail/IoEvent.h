@@ -1,41 +1,56 @@
-#ifndef COLD_IO_IOEVENT
-#define COLD_IO_IOEVENT
+#ifndef COLD_DETAIL_IOEVENT
+#define COLD_DETAIL_IOEVENT
 
 #include <sys/epoll.h>
+#include <unistd.h>
 
 #include <coroutine>
 #include <string>
 
 namespace Cold {
-
 class IoContext;
-
-namespace detail {
-class IoWatcher;
 }
+
+namespace Cold::Detail {
+
+class IoWatcher;
 
 class IoEvent {
  public:
-  friend class detail::IoWatcher;
+  using Handle = std::coroutine_handle<>;
+  friend class IoWatcher;
+
   IoEvent() = default;
+
   ~IoEvent() = default;
 
-  void SetOnReadCoroutine(std::coroutine_handle<> onRead) { onRead_ = onRead; }
-  void SetOnWriteCoroutine(std::coroutine_handle<> onWrite) {
-    onWrite_ = onWrite;
+  void SetOnReadCoroutine(Handle onRead) { onRead_ = onRead; }
+  void SetOnWriteCoroutine(Handle onWrite) { onWrite_ = onWrite; }
+
+  void EnableReading(bool et = false) {
+    events_ |= et ? EPOLLIN | EPOLLET : EPOLLIN;
+    UpdateEvent();
   }
 
-  void EnableReading();
-  void EnableReadingET();
+  void EnableWriting(bool et = false) {
+    events_ |= et ? EPOLLOUT | EPOLLET : EPOLLOUT;
+    UpdateEvent();
+  }
 
-  void EnableWriting();
-  void EnableWritingET();
+  void DisableReading() {
+    events_ &= ~(EPOLLIN | EPOLLET);
+    UpdateEvent();
+  }
 
-  void DisableReading();
+  void DisableWriting() {
+    events_ &= ~(EPOLLOUT | EPOLLET);
+    UpdateEvent();
+  }
 
-  void DisableWriting();
-
-  void DisableAll();
+  void DisableAll() {
+    events_ = 0;
+    UpdateEvent();
+  }
 
   int GetFd() const { return fd_; }
   uint32_t GetEvents() const { return events_; }
@@ -58,19 +73,19 @@ class IoEvent {
   void ClearReadCoroutine() { onRead_ = std::coroutine_handle<>(); }
   void ClearWriteCoroutine() { onWrite_ = std::coroutine_handle<>(); }
 
+  void UpdateEvent();
   void ReturnIoEvent();
-
   IoContext& GetIoContext() const;
 
  private:
   int fd_ = -1;
   uint32_t events_ = 0;
   uint32_t eventsInEpoll_ = 0;
-  detail::IoWatcher* watcher_ = nullptr;
+  IoWatcher* watcher_ = nullptr;
   std::coroutine_handle<> onRead_;
   std::coroutine_handle<> onWrite_;
 };
 
-}  // namespace Cold
+}  // namespace Cold::Detail
 
-#endif /* COLD_IO_IOEVENT */
+#endif /* COLD_DETAIL_IOEVENT */

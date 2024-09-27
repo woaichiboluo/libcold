@@ -1,25 +1,29 @@
-#ifndef COLD_LOG
-#define COLD_LOG
+#ifndef COLD_LOG_LOG
+#define COLD_LOG_LOG
 
-#include "log/LogManager-ini.h"
-#include "log/Logger.h"
+#include "LogManager.h"
+#include "logsinks/StdoutColorSink.h"
 
 namespace Cold {
+
+inline LogManager::LogManager()
+    : defaultLogger_(std::make_shared<Logger>(
+          "main", std::make_shared<StdoutColorSink>())) {}
 
 using LoggerPtr = std::shared_ptr<Logger>;
 #define _COLD_OUTPUT_IMPL(LOGLEVEL, NAME)                                    \
   template <typename... Args>                                                \
   struct NAME {                                                              \
     constexpr NAME(const LoggerPtr &logger, fmt::format_string<Args...> fmt, \
-                   Args &&...args, detail::LocationWrapper wrap = {}) {      \
+                   Args &&...args, Detail::LocationWrapper wrap = {}) {      \
       logger->Log(LOGLEVEL, wrap, fmt, std::forward<Args>(args)...);         \
     }                                                                        \
     constexpr NAME(Logger *logger, fmt::format_string<Args...> fmt,          \
-                   Args &&...args, detail::LocationWrapper wrap = {}) {      \
+                   Args &&...args, Detail::LocationWrapper wrap = {}) {      \
       logger->Log(LOGLEVEL, wrap, fmt, std::forward<Args>(args)...);         \
     }                                                                        \
     constexpr NAME(fmt::format_string<Args...> fmt, Args &&...args,          \
-                   detail::LocationWrapper wrap = {}) {                      \
+                   Detail::LocationWrapper wrap = {}) {                      \
       LogManager::GetInstance().GetDefaultRaw()->Log(                        \
           LOGLEVEL, wrap, fmt, std::forward<Args>(args)...);                 \
     }                                                                        \
@@ -44,4 +48,4 @@ _COLD_OUTPUT_IMPL(LogLevel::FATAL, FATAL)
 
 }  // namespace Cold
 
-#endif /* COLD_LOG */
+#endif /* COLD_LOG_LOG */

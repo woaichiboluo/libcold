@@ -1,5 +1,5 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "cold/Net.h"
+#include "cold/Cold.h"
 #include "third_party/doctest.h"
 
 using namespace Cold;

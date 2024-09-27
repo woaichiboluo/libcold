@@ -1,4 +1,4 @@
-#include "cold/Net.h"
+#include "cold/Cold.h"
 
 using namespace Cold;
 
@@ -32,11 +32,12 @@ Task<> Connect3(IoContext& context) {
   auto addr = IpAddress::Resolve("www.baidu.com", "9999");
   INFO("Connect3: try to connect to {} with timeout 3s", addr->GetIpPort());
   using namespace std::chrono;
-  auto [timeout, ret] = co_await context.Timeout(socket.Connect(*addr), 3s);
+  auto [timeout, ret] = co_await Timeout(socket.Connect(*addr), 3s);
   INFO("Connect3: timeout: {}", timeout);
 }
 
 int main() {
+  LogManager::GetInstance().GetDefaultRaw()->SetLevel(LogLevel::TRACE);
   IoContext context;
   context.CoSpawn(Connect1(context));
   context.CoSpawn(Connect2(context));

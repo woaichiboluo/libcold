@@ -11,11 +11,14 @@ class TcpSocket : public BasicSocket {
  public:
   // for unvalid socket
   TcpSocket() = default;
+
   // for client
   explicit TcpSocket(IoContext& ioContext, bool ipv6 = false)
       : BasicSocket(ioContext, ipv6, true) {}
+
   // for server
-  explicit TcpSocket(IoEvent* event) : BasicSocket(event, true) {
+  explicit TcpSocket(std::shared_ptr<Detail::IoEvent> event)
+      : BasicSocket(event, true) {
     connected_ = true;
   }
 
@@ -25,9 +28,25 @@ class TcpSocket : public BasicSocket {
   TcpSocket& operator=(TcpSocket&&) = default;
 
   Task<bool> Connect(const IpAddress& address) {
-    assert(IsValid());
-    if (co_await BasicSocket::Connect(address) == 0) {
-      event_->EnableReadingET();
+    assert(IsValid() && !connected_);
+    auto ret =
+        connect(event_->GetFd(), address.GetSockaddr(), address.GetSocklen());
+    if (ret == 0) co_return ret;
+    if (ret < 0 && errno != EINPROGRESS) co_return false;
+    assert(ret == -1 && errno == EINPROGRESS);
+    co_await Detail::WriteIoAwaitable(event_, true);
+    int opt = 0;
+    socklen_t len = sizeof(opt);
+    if (getsockopt(event_->GetFd(), SOL_SOCKET, SO_ERROR, &opt, &len) == 0) {
+      errno = opt;
+      if (opt != 0) {
+        co_return false;
+      }
+      SetRemoteAddress(address);
+      sockaddr_in6 local;
+      len = sizeof(local);
+      getsockname(event_->GetFd(), reinterpret_cast<sockaddr*>(&local), &len);
+      SetLocalAddress(IpAddress(local));
       co_return true;
     }
     co_return false;
@@ -40,25 +59,31 @@ class TcpSocket : public BasicSocket {
   }
 
   [[nodiscard]] Task<ssize_t> Read(void* buffer, size_t size) {
-    assert(IsValid() && IsConnected());
-    if (sslEnabled_) {
-      co_return co_await detail::ReadAwaitable(event_, CanReading(), buffer,
-                                               size);
-    } else {
-      co_return co_await detail::ReadAwaitable(event_, CanReading(), buffer,
-                                               size);
+    while (CanReading()) {
+      auto ret = read(event_->GetFd(), buffer, size);
+      if (ret >= 0) co_return ret;
+      if (errno == EAGAIN) {
+        co_await Detail::ReadIoAwaitable(event_, false);
+        continue;
+      }
+      co_return ret;
     }
+    errno = ENOTCONN;
+    co_return -1;
   }
 
   [[nodiscard]] Task<ssize_t> Write(const void* buffer, size_t size) {
-    assert(IsValid() && IsConnected());
-    if (sslEnabled_) {
-      co_return co_await detail::WriteAwaitable(event_, CanWriting(), buffer,
-                                                size);
-    } else {
-      co_return co_await detail::WriteAwaitable(event_, CanWriting(), buffer,
-                                                size);
+    while (CanWriting()) {
+      auto ret = write(event_->GetFd(), buffer, size);
+      if (ret >= 0) co_return ret;
+      if (errno == EAGAIN) {
+        co_await Detail::WriteIoAwaitable(event_, true);
+        continue;
+      }
+      co_return ret;
     }
+    errno = ENOTCONN;
+    co_return -1;
   }
 
   [[nodiscard]] Task<ssize_t> ReadN(void* buffer, size_t size) {

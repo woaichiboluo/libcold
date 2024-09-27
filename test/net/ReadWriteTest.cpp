@@ -1,4 +1,4 @@
-#include "cold/Net.h"
+#include "cold/Cold.h"
 
 using namespace std::chrono;
 using namespace Cold;
@@ -6,11 +6,12 @@ using namespace Cold;
 Task<> DoEcho(TcpSocket sock) {
   char buf[1024];
   while (true) {
-    auto [timeout, n] =
-        co_await sock.GetIoContext().Timeout(sock.Read(buf, sizeof(buf)), 10s);
+    // auto [timeout, n] =
+    //     co_await sock.GetIoContext().Timeout(sock.Read(buf, sizeof(buf)),
+    //     10s);
+    auto n = co_await sock.Read(buf, sizeof(buf));
     INFO("read {} bytes from {}", n, sock.GetRemoteAddress().GetIpPort());
     if (n <= 0) {
-      if (timeout) INFO("{} timeout", sock.GetRemoteAddress().GetIpPort());
       sock.Close();
       break;
     }

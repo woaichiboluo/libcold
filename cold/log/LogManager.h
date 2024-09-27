@@ -5,6 +5,8 @@
 #include <mutex>
 #include <unordered_map>
 
+#include "Logger.h"
+
 namespace Cold {
 
 class Logger;
@@ -16,8 +18,10 @@ class LogManager {
   LogManager(const LogManager&) = delete;
   LogManager& operator=(const LogManager&) = delete;
 
-  static LogManager& GetInstance();
-
+  static LogManager& GetInstance() {
+    static LogManager instance;
+    return instance;
+  }
   void SetDefault(LoggerPtr logger) {
     std::unique_lock lock(mutex_);
     defaultLogger_ = logger;
@@ -31,7 +35,10 @@ class LogManager {
     return defaultLogger_;
   }
 
-  void Add(LoggerPtr logger);
+  void Add(LoggerPtr logger) {
+    std::unique_lock lock(mutex_);
+    loggers_[logger->GetName()] = logger;
+  }
 
   bool Drop(const std::string& name) {
     std::unique_lock lock(mutex_);

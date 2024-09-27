@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-#include "../Log.h"
+#include "../log/Log.h"
 #include "../util/ScopeUtil.h"
 #include "Endian.h"
 

@@ -1,4 +1,4 @@
-#include "cold/Log.h"
+#include "cold/Cold.h"
 #include "cold/log/logsinks/BasicFileSink.h"
 #include "cold/log/logsinks/NullSink.h"
 #include "cold/log/logsinks/StdoutColorSink.h"

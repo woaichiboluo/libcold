@@ -1,9 +1,8 @@
 #ifndef COLD_NET_BASICSOCKET
 #define COLD_NET_BASICSOCKET
 
-#include <sys/signal.h>
-
-#include "../Io.h"
+#include "../detail/IoAwaitable.h"
+#include "../io/IoContext.h"
 #include "IpAddress.h"
 
 namespace Cold {
@@ -11,6 +10,7 @@ namespace Cold {
 class BasicSocket {
  public:
   enum ShutdownState { kNotShutdown, kShutdownWrite, kShutdownAll };
+
   BasicSocket() = default;
 
   BasicSocket(IoContext& ioContext, bool ipv6, bool isSockStream)
@@ -29,11 +29,11 @@ class BasicSocket {
   }
 
   // adopt a created socket
-  BasicSocket(IoEvent* event, bool isSockStream)
+  BasicSocket(std::shared_ptr<Detail::IoEvent> event, bool isSockStream)
       : ioContext_(&event->GetIoContext()),
-        event_(event),
+        event_(std::move(event)),
         isSockStream_(isSockStream) {
-    event_->EnableReadingET();
+    event_->EnableReading(true);
   }
 
   virtual ~BasicSocket() {
@@ -143,22 +143,22 @@ class BasicSocket {
                       sizeof(opt)) == 0;
   }
 
-  Task<int> Connect(const IpAddress& addr) {
-    auto ret = co_await detail::ConnectAwaitable(event_, addr.GetSockaddr(),
-                                                 addr.GetSocklen());
-    if (ret == 0) {
-      connected_ = true;
-      remoteAddress_ = addr;
-      // get local addr
-      socklen_t len = sizeof(struct sockaddr_in6);
-      getsockname(event_->GetFd(), localAddress_.GetSockaddr(), &len);
-    }
-    co_return ret;
-  }
+  // Task<int> Connect(const IpAddress& addr) {
+  //   auto ret = co_await detail::ConnectAwaitable(event_, addr.GetSockaddr(),
+  //                                                addr.GetSocklen());
+  //   if (ret == 0) {
+  //     connected_ = true;
+  //     remoteAddress_ = addr;
+  //     // get local addr
+  //     socklen_t len = sizeof(struct sockaddr_in6);
+  //     getsockname(event_->GetFd(), localAddress_.GetSockaddr(), &len);
+  //   }
+  //   co_return ret;
+  // }
 
  protected:
   IoContext* ioContext_ = nullptr;
-  IoEvent* event_ = nullptr;
+  std::shared_ptr<Detail::IoEvent> event_;
   bool isSockStream_ = false;
   // for tcp socket connected_ symbolizes if the socket is connected
   // for udp socket connected_ symbolizes if the socket is bind

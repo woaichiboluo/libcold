@@ -1,4 +1,4 @@
-#include "cold/Log.h"
+#include "cold/Cold.h"
 
 using namespace Cold;
 
