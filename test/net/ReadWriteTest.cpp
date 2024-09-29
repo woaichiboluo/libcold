@@ -9,12 +9,13 @@ Task<> DoEcho(TcpSocket sock) {
     // auto [timeout, n] =
     //     co_await sock.GetIoContext().Timeout(sock.Read(buf, sizeof(buf)),
     //     10s);
-    auto n = co_await sock.Read(buf, sizeof(buf));
-    INFO("read {} bytes from {}", n, sock.GetRemoteAddress().GetIpPort());
-    if (n <= 0) {
+    auto [timeout, n] = co_await Timeout(sock.Read(buf, sizeof(buf)), 1s);
+    if (timeout || n <= 0) {
+      if (timeout) INFO("read timeout. close connection.");
       sock.Close();
       break;
     }
+    INFO("read {} bytes from {}", n, sock.GetRemoteAddress().GetIpPort());
     if (co_await sock.Write(buf, static_cast<size_t>(n)) < 0) {
       sock.Close();
       break;

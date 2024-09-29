@@ -1,7 +1,6 @@
 #ifndef COLD_NET_BASICSOCKET
 #define COLD_NET_BASICSOCKET
 
-#include "../detail/IoAwaitable.h"
 #include "../io/IoContext.h"
 #include "IpAddress.h"
 

@@ -3,6 +3,7 @@
 
 #include <netinet/tcp.h>
 
+#include "../detail/IoAwaitable.h"
 #include "BasicSocket.h"
 
 namespace Cold {
