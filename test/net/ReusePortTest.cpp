@@ -4,6 +4,7 @@ using namespace Cold;
 
 Task<> DoNothing(TcpSocket socket) {
   INFO("New connection addr: {}", socket.GetRemoteAddress().GetIpPort());
+  socket.Close();
   co_return;
 }
 
