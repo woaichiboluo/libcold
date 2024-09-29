@@ -29,3 +29,7 @@ add_test(name IpAddressTest COMMAND IpAddressTest WORKING_DIRECTORY ${CMAKE_BINA
 add_executable(ConnectTest net/ConnectTest.cpp)
 
 add_executable(ReadWriteTest net/ReadWriteTest.cpp)
+
+add_executable(IoContextPoolTest net/IoContextPoolTest.cpp)
+
+add_executable(ReusePortTest net/ReusePortTest.cpp)
