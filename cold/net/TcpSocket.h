@@ -48,6 +48,8 @@ class TcpSocket : public BasicSocket {
       len = sizeof(local);
       getsockname(event_->GetFd(), reinterpret_cast<sockaddr*>(&local), &len);
       SetLocalAddress(IpAddress(local));
+      connected_ = true;
+      event_->EnableReading(true);
       co_return true;
     }
     co_return false;
