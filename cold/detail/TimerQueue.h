@@ -58,7 +58,6 @@ class TimerQueue {
     while (!timeHeap_.empty() && now >= timeHeap_[0].expiry) {
       auto& node = timeHeap_[0];
       if (node.valid) {
-        INFO("Timer expired. TimerId: {}", node.timerId);
         timeoutTasks.push_back(std::move(node.task));
       }
       assert(timerIdToIndexMap_.count(node.timerId));
