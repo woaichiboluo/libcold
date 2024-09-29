@@ -18,10 +18,6 @@ class Acceptor : public TcpSocket {
             ThisThread::ErrorMsg());
     }
     SetReuseAddr();
-    if (!Bind(listenAddr_)) {
-      FATAL("Cannot bind. fd: {}. addr:{}. reason: {}", event_->GetFd(),
-            listenAddr_.GetIpPort(), ThisThread::ErrorMsg());
-    }
   }
 
   ~Acceptor() override {
@@ -35,16 +31,11 @@ class Acceptor : public TcpSocket {
 
   void EnableSSL() { sslEnabled_ = true; }
 
-  void ReusePort(bool reuse) {
-    int opt = reuse ? 1 : 0;
-    if (setsockopt(event_->GetFd(), SOL_SOCKET, SO_REUSEPORT, &opt,
-                   sizeof(opt)) < 0) {
-      FATAL("setsockopt SO_REUSEPORT error. fd: {}. reason: {}",
-            event_->GetFd(), ThisThread::ErrorMsg());
+  void BindAndListen() {
+    if (!Bind(listenAddr_)) {
+      FATAL("Cannot bind. fd: {}. addr:{}. reason: {}", event_->GetFd(),
+            listenAddr_.GetIpPort(), ThisThread::ErrorMsg());
     }
-  }
-
-  void Listen() {
     if (listen(event_->GetFd(), SOMAXCONN) < 0) {
       FATAL("listen error. fd: {}. reason: {}", event_->GetFd(),
             ThisThread::ErrorMsg());

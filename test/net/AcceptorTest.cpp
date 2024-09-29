@@ -6,7 +6,7 @@ using namespace Cold;
 
 Task<> DoAccept(IoContext* ioContext) {
   Acceptor acceptor(*ioContext, IpAddress(8888));
-  acceptor.Listen();
+  acceptor.BindAndListen();
   while (true) {
     auto socket = co_await acceptor.Accept();
     INFO("New Connection from {}", socket.GetRemoteAddress().GetIpPort());

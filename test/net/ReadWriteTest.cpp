@@ -25,7 +25,7 @@ Task<> DoEcho(TcpSocket sock) {
 
 Task<> DoAccept(IoContext& ioContext) {
   Acceptor acceptor(ioContext, IpAddress(8888));
-  acceptor.Listen();
+  acceptor.BindAndListen();
   while (true) {
     auto sock = co_await acceptor.Accept();
     if (sock) sock.GetIoContext().CoSpawn(DoEcho(std::move(sock)));
