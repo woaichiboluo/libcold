@@ -34,6 +34,10 @@ add_executable(IoContextPoolTest net/IoContextPoolTest.cpp)
 
 add_executable(ReusePortTest net/ReusePortTest.cpp)
 
+add_executable(TcpServerReusePortTest net/TcpServerReusePortTest.cpp)
+
+add_executable(TcpServerTest net/TcpServerTest.cpp)
+
 # util
 add_executable(ConfigTest util/ConfigTest.cpp)
 add_test(NAME ConfigTest COMMAND ConfigTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
