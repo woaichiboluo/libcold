@@ -33,3 +33,11 @@ add_executable(ReadWriteTest net/ReadWriteTest.cpp)
 add_executable(IoContextPoolTest net/IoContextPoolTest.cpp)
 
 add_executable(ReusePortTest net/ReusePortTest.cpp)
+
+# util
+add_executable(ConfigTest util/ConfigTest.cpp)
+add_test(NAME ConfigTest COMMAND ConfigTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+
+add_executable(IntWriterTest util/IntWriterTest.cpp)
+add_test(NAME IntWriterTest COMMAND IntWriterTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
