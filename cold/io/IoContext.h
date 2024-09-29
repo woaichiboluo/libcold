@@ -30,39 +30,47 @@ class IoContext {
     running_ = true;
     while (running_) {
       ++iterations_;
-      TRACE("IoContext::Start iterations:{}", iterations_);
-      {
-        std::lock_guard<std::mutex> lock(mutexForPendingResume_);
-        scheduler_->GetPendingCoros().swap(pendingResume_);
-      }
+      TRACE("IoContext Start of this iterations:{}", iterations_);
       std::vector<Task<>> pendingTasks;
-      {
-        std::lock_guard<std::mutex> lock(mutexForPendingTasks_);
-        pendingTasks.swap(pendingTasks_);
-      }
-      Time nextTick;
+      // solve timeout event
       {
         std::lock_guard<std::mutex> lock(mutexForTimerQueue_);
-        nextTick = timerQueue_->Tick(pendingTasks);
+        timerQueue_->Tick(pendingTasks);
       }
       for (auto& task : pendingTasks) {
         task.GetHandle().promise().SetIoContext(this);
         scheduler_->CoSpawn(task.Release());
       }
       scheduler_->DoSchedule();
+      // solve io event
+      static constexpr int kDefaultWaitMs = 300;
+      auto nextTick = timerQueue_->GetNextTick();
       int waitMs = 0;
       auto now = Time::Now();
       auto waitTime = nextTick.TimeSinceEpochMilliSeconds() -
                       now.TimeSinceEpochMilliSeconds();
-      waitMs = waitTime > 0 ? static_cast<int>(waitTime) : 0;
-      static constexpr int kDefaultWaitMs = 300;
+      waitMs = static_cast<int>(waitTime);
       waitMs = std::min(waitMs, kDefaultWaitMs);
       ioWatcher_->WatchIo(scheduler_->GetPendingCoros(), waitMs);
-      TRACE(
-          "In iteration:{} before DoSchedule pending size: {}, coros size: {}",
-          iterations_, scheduler_->GetPendingCorosSize(),
-          scheduler_->GetAllCoroSize());
       scheduler_->DoSchedule();
+      // solve pending event
+      pendingTasks.clear();
+      {
+        std::lock_guard<std::mutex> lock(mutexForPendingTasks_);
+        pendingTasks.swap(pendingTasks_);
+      }
+      {
+        std::lock_guard<std::mutex> lock(mutexForPendingResume_);
+        scheduler_->GetPendingCoros().swap(pendingResume_);
+      }
+      for (auto& task : pendingTasks) {
+        task.GetHandle().promise().SetIoContext(this);
+        scheduler_->CoSpawn(task.Release());
+      }
+      scheduler_->DoSchedule();
+      TRACE("IoContext End of this iteration:{}. unfinished coros size: {}",
+            iterations_, scheduler_->GetPendingCorosSize(),
+            scheduler_->GetAllCoroSize());
       assert(scheduler_->GetPendingCoros().empty());
     }
   }

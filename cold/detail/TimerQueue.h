@@ -53,11 +53,12 @@ class TimerQueue {
     Fixup(index);
   }
 
-  Time Tick(std::vector<Task<>>& timeoutTasks) {
+  void Tick(std::vector<Task<>>& timeoutTasks) {
     auto now = Time::Now();
     while (!timeHeap_.empty() && now >= timeHeap_[0].expiry) {
       auto& node = timeHeap_[0];
       if (node.valid) {
+        INFO("Timer expired. TimerId: {}", node.timerId);
         timeoutTasks.push_back(std::move(node.task));
       }
       assert(timerIdToIndexMap_.count(node.timerId));
@@ -69,10 +70,13 @@ class TimerQueue {
       FixDown(0);
     }
     assert(timeHeap_.empty() || timeHeap_[0].expiry > now);
+  }
+
+  Time GetNextTick() {
     if (!timeHeap_.empty()) {
       return timeHeap_[0].expiry;
     }
-    return now + std::chrono::milliseconds(500);
+    return Time::Now() + std::chrono::seconds(1);
   }
 
  private:

@@ -48,8 +48,9 @@ class IoWatcher {
       auto* ioEvent = static_cast<IoEvent*>(ev.data.ptr);
       assert(ioEvents_.count(ioEvent->fd_));
       assert(ioEvents_[ioEvent->fd_].get() == ioEvent);
-      TRACE("Current solve fd: {}, happen events: {}, watch events: {}", size,
-            IoEvent::DumpEv(ev.events), ioEvent->DumpEventsInEpoll());
+      TRACE("Current solve fd: {}, happen events: {}, watch events: {}",
+            ioEvent->fd_, IoEvent::DumpEv(ev.events),
+            ioEvent->DumpEventsInEpoll());
       if (ioEvent->fd_ == wakeUpFd_) {
         HandleWakeUp();
         continue;
