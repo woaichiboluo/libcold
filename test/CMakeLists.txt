@@ -20,6 +20,10 @@ add_executable(LogSinkTest log/LogSinkTest.cpp)
 add_executable(TaskTest coro/TaskTest.cpp)
 add_test(NAME TaskTest COMMAND TaskTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# io
+add_executable(AsyncIoTest io/AsyncIoTest.cpp)
+add_executable(IoContextPoolTest io/IoContextPoolTest.cpp)
+
 # net
 add_executable(AcceptorTest net/AcceptorTest.cpp)
 
@@ -30,7 +34,6 @@ add_executable(ConnectTest net/ConnectTest.cpp)
 
 add_executable(ReadWriteTest net/ReadWriteTest.cpp)
 
-add_executable(IoContextPoolTest net/IoContextPoolTest.cpp)
 
 add_executable(ReusePortTest net/ReusePortTest.cpp)
 
