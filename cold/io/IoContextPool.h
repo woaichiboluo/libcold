@@ -23,7 +23,7 @@ class IoContextPool {
     for (size_t i = 0; i < poolSize_; ++i) {
       auto thread =
           Thread([context = contexts_[i].get()]() { context->Start(); },
-                 nameArg_ + "-" + std::to_string(i));
+                 nameArg_ + "-" + std::to_string(i + 1));
       thread.Start();
       threads_.push_back(std::move(thread));
     }

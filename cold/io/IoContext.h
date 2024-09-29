@@ -103,18 +103,27 @@ class IoContext {
   }
 
   void AddTimer(Timer* timer) {
-    std::lock_guard<std::mutex> lock(mutexForTimerQueue_);
-    timerQueue_->AddTimer(timer);
+    {
+      std::lock_guard<std::mutex> lock(mutexForTimerQueue_);
+      timerQueue_->AddTimer(timer);
+    }
+    ioWatcher_->WakeUp();
   }
 
   void UpdateTimer(Timer* timer) {
-    std::lock_guard<std::mutex> lock(mutexForTimerQueue_);
-    timerQueue_->UpdateTimer(timer);
+    {
+      std::lock_guard<std::mutex> lock(mutexForTimerQueue_);
+      timerQueue_->UpdateTimer(timer);
+    }
+    ioWatcher_->WakeUp();
   }
 
   void CancelTimer(Timer* timer) {
-    std::lock_guard<std::mutex> lock(mutexForTimerQueue_);
-    timerQueue_->CancelTimer(timer);
+    {
+      std::lock_guard<std::mutex> lock(mutexForTimerQueue_);
+      timerQueue_->CancelTimer(timer);
+    }
+    ioWatcher_->WakeUp();
   }
 
   size_t GetIterations() const { return iterations_; }
