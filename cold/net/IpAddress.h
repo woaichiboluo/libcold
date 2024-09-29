@@ -12,8 +12,8 @@
 #include <vector>
 
 #include "../log/Log.h"
+#include "../util/Endian.h"
 #include "../util/ScopeUtil.h"
-#include "Endian.h"
 
 namespace Cold {
 
