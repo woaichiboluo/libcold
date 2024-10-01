@@ -3,7 +3,6 @@
 #include "cold/Cold.h"
 #include "third_party/doctest.h"
 
-using Cold::Scheduler;
 using Cold::Task;
 
 TEST_CASE("Test Resume Task") {
@@ -14,14 +13,8 @@ TEST_CASE("Test Resume Task") {
   }(value);
   CHECK(value == 0);
   CHECK(!task.Done());
-  Scheduler s;
-  s.CoSpawn(task.Release());
-  CHECK(s.GetAllCoroSize() == 1);
-  CHECK(s.GetPendingCorosSize() == 1);
+  task.GetHandle().resume();
   CHECK(task.Done());  // after move become null handle
-  s.DoSchedule();
-  CHECK(s.GetAllCoroSize() == 0);
-  CHECK(s.GetPendingCorosSize() == 0);
   CHECK(value == 100);
 }
 
@@ -59,13 +52,7 @@ Task<> Co3() {
 TEST_CASE("Test Nested tasks") {
   auto coro = []() -> Task<> { co_await Co3(); }();
   CHECK(coro.Done() == false);
-  Scheduler s;
-  s.CoSpawn(coro.Release());
-  CHECK(s.GetAllCoroSize() == 1);
-  CHECK(s.GetPendingCorosSize() == 1);
-  s.DoSchedule();
-  CHECK(s.GetAllCoroSize() == 0);
-  CHECK(s.GetPendingCorosSize() == 0);
+  coro.GetHandle().resume();
   CHECK(coro.Done());
 }
 
@@ -85,17 +72,9 @@ TEST_CASE("Test move task") {
   CHECK(coro.Done());
   CHECK(!c.Done());
   CHECK(value == 0);
-
-  Scheduler s;
-
-  s.CoSpawn(c.Release());
+  c.GetHandle().resume();
   CHECK(c.Done());
   CHECK(coro.Done());
-  CHECK(s.GetAllCoroSize() == 1);
-  CHECK(s.GetPendingCorosSize() == 1);
-  s.DoSchedule();
-  CHECK(s.GetAllCoroSize() == 0);
-  CHECK(s.GetPendingCorosSize() == 0);
   CHECK(value == 666);
 }
 
@@ -139,11 +118,7 @@ TEST_CASE("Test task return value") {
   }(std::move(intCoro), std::move(rvalueCoro), std::move(strCoro),
                                               std::move(strviewCoro),
                                               std::move(vectorCoro));
-  Scheduler s;
-  s.CoSpawn(coro.Release());
-  CHECK(s.GetAllCoroSize() == 1);
-  CHECK(s.GetPendingCorosSize() == 1);
-  s.DoSchedule();
-  CHECK(s.GetAllCoroSize() == 0);
-  CHECK(s.GetPendingCorosSize() == 0);
+  CHECK(!coro.Done());
+  coro.GetHandle().resume();
+  CHECK(coro.Done());
 }
