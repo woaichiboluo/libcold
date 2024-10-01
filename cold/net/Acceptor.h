@@ -56,20 +56,16 @@ class Acceptor : public TcpSocket {
     assert(listened_);
     sockaddr_in6 addr;
     socklen_t addrLen = sizeof(addr);
-    Timer timer(context);
     while (true) {
       auto sockfd = accept4(event_->GetFd(), reinterpret_cast<sockaddr*>(&addr),
                             &addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
       if (sockfd >= 0) {
-        co_return co_await timer.AsyncWaitable(
-            [](IoContext& c, int fd, IpAddress local,
-               IpAddress remote) -> Task<TcpSocket> {
-              auto ev = c.TakeIoEvent(fd);
-              auto socket = TcpSocket(ev);
-              socket.SetLocalAddress(local);
-              socket.SetRemoteAddress(IpAddress(remote));
-              co_return socket;
-            }(context, sockfd, listenAddr_, IpAddress(addr)));
+        co_await context.RunInThisContext();
+        auto ev = context.TakeIoEvent(sockfd);
+        TcpSocket socket(ev);
+        socket.SetLocalAddress(localAddress_);
+        socket.SetRemoteAddress(IpAddress(addr));
+        co_return socket;
       } else {
         if (errno == EMFILE) {
           close(idleFd_);
