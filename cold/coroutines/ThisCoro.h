@@ -28,6 +28,24 @@ struct GetIoContext {
   IoContext* context_;
 };
 
+struct GetCurExecuteIoContext {
+  GetCurExecuteIoContext() noexcept = default;
+  ~GetCurExecuteIoContext() noexcept = default;
+
+  bool await_ready() const noexcept { return false; }
+
+  template <typename T>
+  bool await_suspend(std::coroutine_handle<T> handle) noexcept {
+    context_ = handle.promise().GetCurExecuteIoContext();
+    return false;
+  }
+
+  IoContext& await_resume() noexcept { return *context_; }
+
+ private:
+  IoContext* context_;
+};
+
 struct GetHandle {
   GetHandle() noexcept = default;
   ~GetHandle() noexcept = default;

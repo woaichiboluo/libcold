@@ -73,7 +73,8 @@ class Task {
 
     bool await_ready() noexcept { return false; }
 
-    bool await_suspend(std::coroutine_handle<> caller) noexcept {
+    std::coroutine_handle<> await_suspend(
+        std::coroutine_handle<> caller) noexcept {
       auto& callerPromise =
           std::coroutine_handle<Detail::PromiseBase>::from_address(
               caller.address())
@@ -82,10 +83,7 @@ class Task {
       currentCoroPromise.SetIoContext(callerPromise.GetIoContext());
       currentCoroPromise.SetContinuation(caller);
       currentCoroPromise.SetStopToken(callerPromise.GetStopToken());
-      currentCoro_.resume();
-      auto ready = currentCoroPromise.IsReady();
-      currentCoroPromise.SetReady();
-      return !ready;
+      return currentCoro_;
     }
 
     auto await_resume() noexcept {

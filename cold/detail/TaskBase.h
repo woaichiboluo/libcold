@@ -27,12 +27,12 @@ class PromiseBase {
     continuation_ = continuation;
   }
 
-  bool IsReady() const { return ready_; }
-
-  void SetReady() { ready_ = true; }
-
   void SetIoContext(IoContext* ioContext) { ioContext_ = ioContext; }
   IoContext* GetIoContext() const { return ioContext_; }
+  void SetCurExecuteIoContext(IoContext* executeContext) {
+    executeContext_ = executeContext;
+  }
+  IoContext* GetCurExecuteIoContext() const { return executeContext_; }
 
   void SetStopToken(std::stop_token&& stopToken) { stopToken_ = stopToken; }
   std::stop_token GetStopToken() const { return stopToken_; }
@@ -42,27 +42,24 @@ class PromiseBase {
     bool await_ready() noexcept { return false; }
 
     template <typename T>
-    void await_suspend(std::coroutine_handle<T> handle) noexcept {
+    std::coroutine_handle<> await_suspend(
+        std::coroutine_handle<T> handle) noexcept {
       auto& promise = handle.promise();
-      auto ready = promise.IsReady();
-      promise.SetReady();
-      if (promise.continuation_ && ready) {
-        // auto& parentPromise =
-        // std::coroutine_handle<PromiseBase>::from_address(
-        //                           promise.continuation_.address())
-        //                           .promise();
-        // if (ready && !parentPromise.stopToken_.stop_requested()) {
-        promise.continuation_.resume();
-        // }
+      if (promise.continuation_) {
+        return promise.continuation_;
+      } else {
+        return std::noop_coroutine();
       }
     }
 
     void await_resume() noexcept {}
   };
 
-  bool ready_ = false;
   std::coroutine_handle<> continuation_;
+  // task create context
   IoContext* ioContext_ = nullptr;
+  // current execute task context
+  IoContext* executeContext_ = nullptr;
   std::stop_token stopToken_;
 };
 
