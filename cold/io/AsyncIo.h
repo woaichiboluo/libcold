@@ -29,6 +29,9 @@ class AsyncIo {
 
   ~AsyncIo() { Clean(); }
 
+  AsyncIo(const AsyncIo&) = delete;
+  AsyncIo& operator=(const AsyncIo&) = delete;
+
   bool IsValid() const { return event_.get(); }
 
   operator bool() const { return IsValid(); }
