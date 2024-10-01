@@ -28,7 +28,7 @@ class TcpSocket : public BasicSocket {
   TcpSocket(TcpSocket&&) = default;
   TcpSocket& operator=(TcpSocket&&) = default;
 
-  Task<bool> Connect(const IpAddress& address) {
+  Task<bool> Connect(IpAddress address) {
     assert(IsValid() && !connected_);
     auto ret =
         connect(event_->GetFd(), address.GetSockaddr(), address.GetSocklen());
