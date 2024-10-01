@@ -24,6 +24,8 @@ add_executable(AsyncMutexTest coro/AsyncMutexTest.cpp)
 
 add_executable(ConditionTest coro/ConditionTest.cpp)
 
+add_executable(ChannelTest coro/ChannelTest.cpp)
+
 
 # io
 add_executable(AsyncIoTest io/AsyncIoTest.cpp)
