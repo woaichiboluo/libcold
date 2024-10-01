@@ -17,6 +17,15 @@ template <typename T, typename REP, typename PERIOD>
                                               duration);
 }
 
+template <typename T, typename REP, typename PERIOD>
+[[nodiscard]] auto Timeout(IoContext* context, Task<T> task,
+                           std::chrono::duration<REP, PERIOD> duration)
+    -> Task<
+        std::conditional_t<std::is_same_v<T, void>, bool, std::pair<bool, T>>> {
+  co_return co_await Detail::TimeoutAwaitable(context, std::move(task),
+                                              duration);
+}
+
 template <typename REP, typename PERIOD>
 [[nodiscard]] Task<> Sleep(std::chrono::duration<REP, PERIOD> duration) {
   auto& context = co_await ThisCoro::GetIoContext{};
