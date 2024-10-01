@@ -20,6 +20,11 @@ add_executable(LogSinkTest log/LogSinkTest.cpp)
 add_executable(TaskTest coro/TaskTest.cpp)
 add_test(NAME TaskTest COMMAND TaskTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+add_executable(AsyncMutexTest coro/AsyncMutexTest.cpp)
+
+add_executable(ConditionTest coro/ConditionTest.cpp)
+
+
 # io
 add_executable(AsyncIoTest io/AsyncIoTest.cpp)
 add_executable(IoContextPoolTest io/IoContextPoolTest.cpp)
