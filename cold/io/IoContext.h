@@ -51,6 +51,7 @@ class IoContext {
       auto waitTime = nextTick.TimeSinceEpochMilliSeconds() -
                       now.TimeSinceEpochMilliSeconds();
       waitMs = static_cast<int>(waitTime);
+      if (waitMs < 0) waitMs = 0;
       waitMs = std::min(waitMs, kDefaultWaitMs);
       ioWatcher_->WatchIo(pendingResume, waitMs);
       DoSchedule(pendingTasks, pendingResume);

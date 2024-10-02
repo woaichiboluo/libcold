@@ -57,6 +57,7 @@ class Acceptor : public TcpSocket {
     sockaddr_in6 addr;
     socklen_t addrLen = sizeof(addr);
     while (true) {
+      co_await ioContext_->RunInThisContext();
       auto sockfd = accept4(event_->GetFd(), reinterpret_cast<sockaddr*>(&addr),
                             &addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
       if (sockfd >= 0) {
