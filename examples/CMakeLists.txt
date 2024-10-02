@@ -13,3 +13,9 @@ add_executable(TtcpReceiver net/ttcp/TtcpReceiver.cpp)
 
 # net simple
 add_subdirectory(net/simple)
+
+# net filetransfer
+add_executable(FileTransfer net/filetransfer/Transfer.cpp)
+
+# net socks4a
+add_executable(TcpRelay net/socks4a/TcpRelay.cpp)
