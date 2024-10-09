@@ -58,6 +58,13 @@ It ReadInt(T& value, It b) requires(
   return e;
 }
 
+template <typename T, typename It>
+T ReadInt(It b) {
+  T value;
+  ReadInt(value, b);
+  return value;
+}
+
 }  // namespace Cold
 
 #endif /* COLD_UTIL_INTWRITER */
