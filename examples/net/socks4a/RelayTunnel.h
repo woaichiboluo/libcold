@@ -1,5 +1,5 @@
-#ifndef EXAMPLES_NET_SOCKS4A_TUNNEL
-#define EXAMPLES_NET_SOCKS4A_TUNNEL
+#ifndef EXAMPLES_NET_SOCKS4A_RELAYTUNNEL
+#define EXAMPLES_NET_SOCKS4A_RELAYTUNNEL
 
 #include "cold/Cold.h"
 
@@ -68,4 +68,4 @@ class Tunnel : public std::enable_shared_from_this<Tunnel> {
   bool stoped_ = false;
 };
 
-#endif /* EXAMPLES_NET_SOCKS4A_TUNNEL */
+#endif /* EXAMPLES_NET_SOCKS4A_RELAYTUNNEL */
