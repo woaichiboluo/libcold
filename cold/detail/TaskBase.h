@@ -34,7 +34,7 @@ class PromiseBase {
   }
   IoContext* GetCurExecuteIoContext() const { return executeContext_; }
 
-  void SetStopToken(std::stop_token&& stopToken) { stopToken_ = stopToken; }
+  void SetStopToken(std::stop_token stopToken) { stopToken_ = stopToken; }
   std::stop_token GetStopToken() const { return stopToken_; }
 
  private:
