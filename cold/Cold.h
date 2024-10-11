@@ -5,8 +5,11 @@
 #include "coroutines/AsyncMutex.h"
 #include "coroutines/Channel.h"
 #include "coroutines/Condition.h"
+#include "coroutines/CountDownLatch.h"
 #include "coroutines/Task.h"
 #include "coroutines/ThisCoro.h"
+#include "coroutines/WhenAll.h"
+#include "coroutines/WhenAny.h"
 // io
 #include "io/AsyncIo.h"
 #include "io/IoContext.h"

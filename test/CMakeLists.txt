@@ -26,6 +26,10 @@ add_executable(ConditionTest coro/ConditionTest.cpp)
 
 add_executable(ChannelTest coro/ChannelTest.cpp)
 
+add_executable(WhenAnyTest coro/WhenAnyTest.cpp)
+
+add_executable(WhenAllTest coro/WhenAllTest.cpp)
+
 
 # io
 add_executable(AsyncIoTest io/AsyncIoTest.cpp)
