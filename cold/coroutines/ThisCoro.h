@@ -46,6 +46,17 @@ struct GetCurExecuteIoContext {
   IoContext* context_;
 };
 
+struct Suspend {
+  Suspend() noexcept = default;
+  ~Suspend() noexcept = default;
+
+  bool await_ready() const noexcept { return false; }
+
+  void await_suspend(std::coroutine_handle<>) noexcept {}
+
+  void await_resume() noexcept {}
+};
+
 struct GetHandle {
   GetHandle() noexcept = default;
   ~GetHandle() noexcept = default;
