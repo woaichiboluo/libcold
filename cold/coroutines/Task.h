@@ -65,6 +65,22 @@ class Task {
     return TaskAwaitable(handle_);
   }
 
+  [[nodiscard]] Task<T> operator|(std::stop_token token) {
+    assert(handle_);
+    handle_.promise().SetStopToken(token);
+    return std::move(*this);
+  }
+
+  template <typename U>
+  [[nodiscard]] Task<> operator&(Task<U> other) && {
+    assert(handle_ && other.GetHandle());
+    auto newTask = [](Task<T> a, Task<U> b) -> Task<> {
+      co_await a;
+      co_await b;
+    }(std::move(*this), std::move(other));
+    return newTask;
+  }
+
  private:
   struct TaskAwaitable {
     TaskAwaitable(std::coroutine_handle<promise_type> handle)
