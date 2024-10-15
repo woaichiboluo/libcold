@@ -38,6 +38,7 @@ class EchoClient {
       }
       fmt::println("{}", std::string_view(buf1, static_cast<size_t>(n - 1)));
     }
+    socket_.GetIoContext().Stop();
   }
 
   TcpSocket socket_;
