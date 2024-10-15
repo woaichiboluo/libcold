@@ -11,8 +11,9 @@ class EchoClient {
     if (!co_await socket_.Connect(addr)) {
       ERROR("connect failed. reason: {}", ThisThread::ErrorMsg());
       socket_.GetIoContext().Stop();
+    } else {
+      co_await DoEcho();
     }
-    co_await DoEcho();
   }
 
  private:
