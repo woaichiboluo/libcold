@@ -22,6 +22,12 @@ class TcpServer {
 
   IpAddress GetLocalAddress() const { return localAddress_; }
 
+#ifdef COLD_ENABLE_SSL
+  void EnableSSL(SSLContext& sslContext) {
+    acceptor_.SetSSLContext(sslContext);
+  }
+#endif
+
   void Start() {
     assert(!started_);
     acceptor_.BindAndListen();

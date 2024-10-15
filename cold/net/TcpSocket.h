@@ -6,6 +6,10 @@
 #include "../detail/IoAwaitable.h"
 #include "BasicSocket.h"
 
+#ifdef COLD_ENABLE_SSL
+#include "SSLContext.h"
+#endif
+
 namespace Cold {
 
 class TcpSocket : public BasicSocket {
@@ -22,6 +26,14 @@ class TcpSocket : public BasicSocket {
       : BasicSocket(event, true) {
     connected_ = true;
   }
+
+#ifdef COLD_ENABLE_SSL
+  // for server
+  TcpSocket(std::shared_ptr<Detail::IoEvent> event, SSL* ssl)
+      : BasicSocket(event, true), sslEnabled_(true), sslHodler_(ssl) {
+    connected_ = true;
+  }
+#endif
 
   ~TcpSocket() override = default;
 
@@ -49,6 +61,17 @@ class TcpSocket : public BasicSocket {
       getsockname(event_->GetFd(), reinterpret_cast<sockaddr*>(&local), &len);
       SetLocalAddress(IpAddress(local));
       connected_ = true;
+#ifdef COLD_ENABLE_SSL
+      if (sslEnabled_) {
+        SSL* ssl = co_await Handshake(
+            event_, SSLContext::GetGlobalDefaultInstance(), false);
+        if (!ssl) {
+          Close();
+          co_return false;
+        }
+        sslHodler_ = SSLHolder(ssl);
+      }
+#endif
       event_->EnableReading(true);
       co_return true;
     }
@@ -62,6 +85,11 @@ class TcpSocket : public BasicSocket {
   }
 
   [[nodiscard]] Task<ssize_t> Read(void* buffer, size_t size) {
+#ifdef COLD_ENABLE_SSL
+    if (sslEnabled_) {
+      co_return co_await SSLRead(buffer, size);
+    }
+#endif
     while (CanReading()) {
       auto ret = read(event_->GetFd(), buffer, size);
       if (ret >= 0) co_return ret;
@@ -76,6 +104,11 @@ class TcpSocket : public BasicSocket {
   }
 
   [[nodiscard]] Task<ssize_t> Write(const void* buffer, size_t size) {
+#ifdef COLD_ENABLE_SSL
+    if (sslEnabled_) {
+      co_return co_await SSLWrite(buffer, size);
+    }
+#endif
     while (CanWriting()) {
       auto ret = write(event_->GetFd(), buffer, size);
       if (ret >= 0) co_return ret;
@@ -112,10 +145,97 @@ class TcpSocket : public BasicSocket {
     co_return static_cast<ssize_t>(size);
   }
 
+#ifdef COLD_ENABLE_SSL
   void EnableSSL() { sslEnabled_ = true; }
 
+  void Close() {
+    if (sslHodler_.GetNativeHandle()) {
+      SSL_shutdown(sslHodler_.GetNativeHandle());
+    }
+    BasicSocket::Close();
+  }
+
+  SSL* GetSSLNativeHandle() const { return sslHodler_.GetNativeHandle(); }
+
  protected:
+  Task<ssize_t> SSLRead(void* buffer, size_t size) {
+    while (CanReading()) {
+      auto ret = SSL_read(sslHodler_.GetNativeHandle(), buffer,
+                          static_cast<int>(size));
+      if (ret >= 0) co_return ret;
+      int err = sslHodler_.GetSSLErrorCode(ret);
+      if (err == SSL_ERROR_WANT_READ) {
+        co_await Detail::ReadIoAwaitable(event_, false);
+        continue;
+      }
+      co_return ret;
+    }
+    errno = ENOTCONN;
+    co_return -1;
+  }
+
+  Task<ssize_t> SSLWrite(const void* buffer, size_t size) {
+    while (CanWriting()) {
+      auto ret = SSL_write(sslHodler_.GetNativeHandle(), buffer,
+                           static_cast<int>(size));
+      if (ret >= 0) co_return ret;
+      int err = sslHodler_.GetSSLErrorCode(ret);
+      if (err == SSL_ERROR_WANT_WRITE) {
+        co_await Detail::WriteIoAwaitable(event_, true);
+        continue;
+      }
+      co_return ret;
+    }
+    errno = ENOTCONN;
+    co_return -1;
+  }
+
+  static Task<SSL*> Handshake(std::shared_ptr<Detail::IoEvent> ev,
+                              SSLContext& sslContext, bool accept) {
+    bool error = false;
+    auto ssl = SSL_new(sslContext.GetNativeHandle());
+    ScopeGuard guard([&]() {
+      if (!error || !ssl) return;
+      SSL_free(ssl);
+    });
+    if (!ssl) {
+      error = true;
+      ERROR("SSL_new failed. {}", SSLError::GetLastErrorStr());
+      co_return nullptr;
+    }
+    if (!SSL_set_fd(ssl, ev->GetFd())) {
+      error = true;
+      ERROR("SSL_set_fd failed. {}", SSLError::GetLastErrorStr());
+      co_return nullptr;
+    }
+    if (accept) {
+      SSL_set_accept_state(ssl);
+    } else {
+      SSL_set_connect_state(ssl);
+    }
+    while (true) {
+      auto ret = SSL_do_handshake(ssl);
+      if (ret == 1) break;
+      auto err = SSLError::GetSSLErrorCode(ssl, ret);
+      if (err == SSL_ERROR_WANT_READ) {
+        co_await Detail::ReadIoAwaitable(ev, true);
+      } else if (err == SSL_ERROR_WANT_WRITE) {
+        co_await Detail::WriteIoAwaitable(ev, true);
+      } else {
+        error = true;
+        // ERROR("SSL_do_handshake failed. ssl error code : {}  {}", err,
+        //       SSLContext::GetLastErrorStr());
+        co_return nullptr;
+      }
+    }
+    assert(!error && ssl);
+    co_return ssl;
+  }
+
   bool sslEnabled_ = false;
+  SSLHolder sslHodler_;
+
+#endif
 };
 
 }  // namespace Cold

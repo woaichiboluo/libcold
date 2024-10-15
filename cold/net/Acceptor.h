@@ -29,7 +29,15 @@ class Acceptor : public TcpSocket {
   Acceptor(const Acceptor&) = delete;
   Acceptor& operator=(const Acceptor&) = delete;
 
-  void EnableSSL() { sslEnabled_ = true; }
+#ifdef COLD_ENABLE_SSL
+  // acceptor use SetSSLContext to enable ssl
+  void SetSSLContext(SSLContext& sslContext) {
+    sslContext_ = &sslContext;
+    if (!sslContext_->IsCertLoaded()) {
+      FATAL("SSL cert not loaded.");
+    }
+  }
+#endif
 
   void BindAndListen() {
     if (!Bind(listenAddr_)) {
@@ -63,7 +71,22 @@ class Acceptor : public TcpSocket {
       if (sockfd >= 0) {
         co_await context.RunInThisContext();
         auto ev = context.TakeIoEvent(sockfd);
-        TcpSocket socket(ev);
+        TcpSocket socket;
+#ifdef COLD_ENABLE_SSL
+        if (sslContext_) {
+          auto ssl = co_await Handshake(ev, *sslContext_, true);
+          if (!ssl) {
+            ev->ReturnIoEvent();
+            close(sockfd);
+            co_return socket;
+          }
+          socket = TcpSocket(ev, ssl);
+        } else {
+          socket = TcpSocket(ev);
+        }
+#else
+        socket = TcpSocket(ev);
+#endif
         socket.SetLocalAddress(localAddress_);
         socket.SetRemoteAddress(IpAddress(addr));
         co_return socket;
@@ -91,6 +114,10 @@ class Acceptor : public TcpSocket {
   int idleFd_;
   IpAddress listenAddr_;
   bool listened_ = false;
+
+#ifdef COLD_ENABLE_SSL
+  SSLContext* sslContext_ = nullptr;
+#endif
 };
 
 }  // namespace Cold
