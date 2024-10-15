@@ -20,3 +20,7 @@ add_executable(FileTransfer net/filetransfer/Transfer.cpp)
 # net socks4a
 add_executable(TcpRelay net/socks4a/TcpRelay.cpp)
 add_executable(Socks4a net/socks4a/Socks4a.cpp)
+
+if(${BUILD_SSL_MODE})
+    add_subdirectory(net/ssl)
+endif()
