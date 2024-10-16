@@ -23,14 +23,14 @@ else()
 endif()
 
 # find openssl
-# find_package(OpenSSL)
-# if(OPENSSL_FOUND)
-#     message("Found OpenSSL: ${OPENSSL_INCLUDE_DIR}")
-#     set(BUILD_SSL_MODE ON)
-# else()
-#     set(BUILD_SSL_MODE OFF)
-#     message("Not found OpenSSL")
-# endif()
+find_package(OpenSSL)
+if(OPENSSL_FOUND)
+    message("Found OpenSSL: ${OPENSSL_INCLUDE_DIR}")
+    set(BUILD_SSL_MODE ON)
+else()
+    set(BUILD_SSL_MODE OFF)
+    message("Not found OpenSSL")
+endif()
 
 #find protobuf
 find_package(protobuf CONFIG)
