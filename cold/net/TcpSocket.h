@@ -162,29 +162,41 @@ class TcpSocket : public BasicSocket {
     while (CanReading()) {
       auto ret = SSL_read(sslHodler_.GetNativeHandle(), buffer,
                           static_cast<int>(size));
-      if (ret >= 0) co_return ret;
       int err = sslHodler_.GetSSLErrorCode(ret);
-      if (err == SSL_ERROR_WANT_READ) {
-        co_await Detail::ReadIoAwaitable(event_, false);
-        continue;
+      if (err == SSL_ERROR_NONE) {
+        co_return ret;
+      } else {
+        ERR_clear_error();
+        if (err == SSL_ERROR_WANT_READ) {
+          co_await Detail::ReadIoAwaitable(event_, false);
+        } else if (err == SSL_ERROR_ZERO_RETURN) {
+          co_return 0;
+        } else {
+          co_return -1;
+        }
       }
-      co_return ret;
     }
     errno = ENOTCONN;
     co_return -1;
   }
 
   Task<ssize_t> SSLWrite(const void* buffer, size_t size) {
+    assert(size);
     while (CanWriting()) {
+      ERR_clear_error();
       auto ret = SSL_write(sslHodler_.GetNativeHandle(), buffer,
                            static_cast<int>(size));
-      if (ret >= 0) co_return ret;
       int err = sslHodler_.GetSSLErrorCode(ret);
-      if (err == SSL_ERROR_WANT_WRITE) {
-        co_await Detail::WriteIoAwaitable(event_, true);
-        continue;
+      if (err == SSL_ERROR_NONE) {
+        co_return ret;
+      } else {
+        ERR_clear_error();
+        if (err == SSL_ERROR_WANT_WRITE) {
+          co_await Detail::WriteIoAwaitable(event_, true);
+        } else {
+          co_return -1;
+        }
       }
-      co_return ret;
     }
     errno = ENOTCONN;
     co_return -1;
@@ -196,16 +208,17 @@ class TcpSocket : public BasicSocket {
     auto ssl = SSL_new(sslContext.GetNativeHandle());
     ScopeGuard guard([&]() {
       if (!error || !ssl) return;
+      ERR_clear_error();
       SSL_free(ssl);
     });
     if (!ssl) {
       error = true;
-      ERROR("SSL_new failed. {}", SSLError::GetLastErrorStr());
+      DEBUG("SSL_new failed. {}", SSLError::GetLastErrorStr());
       co_return nullptr;
     }
     if (!SSL_set_fd(ssl, ev->GetFd())) {
       error = true;
-      ERROR("SSL_set_fd failed. {}", SSLError::GetLastErrorStr());
+      DEBUG("SSL_set_fd failed. {}", SSLError::GetLastErrorStr());
       co_return nullptr;
     }
     if (accept) {
@@ -223,8 +236,6 @@ class TcpSocket : public BasicSocket {
         co_await Detail::WriteIoAwaitable(ev, true);
       } else {
         error = true;
-        // ERROR("SSL_do_handshake failed. ssl error code : {}  {}", err,
-        //       SSLContext::GetLastErrorStr());
         co_return nullptr;
       }
     }
