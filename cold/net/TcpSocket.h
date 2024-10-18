@@ -40,43 +40,39 @@ class TcpSocket : public BasicSocket {
   TcpSocket(TcpSocket&&) = default;
   TcpSocket& operator=(TcpSocket&&) = default;
 
+#ifdef COLD_ENABLE_SSL
   Task<bool> Connect(IpAddress address) {
-    assert(IsValid() && !connected_);
-    auto ret =
-        connect(event_->GetFd(), address.GetSockaddr(), address.GetSocklen());
-    if (ret == 0) co_return ret;
-    if (ret < 0 && errno != EINPROGRESS) co_return false;
-    assert(ret == -1 && errno == EINPROGRESS);
-    co_await Detail::WriteIoAwaitable(event_, true);
-    int opt = 0;
-    socklen_t len = sizeof(opt);
-    if (getsockopt(event_->GetFd(), SOL_SOCKET, SO_ERROR, &opt, &len) == 0) {
-      errno = opt;
-      if (opt != 0) {
+    if (sslEnabled_) {
+      co_return co_await Connect(address,
+                                 SSLContext::GetGlobalDefaultInstance());
+    } else {
+      auto ret = co_await ConnectInternal(address);
+      if (ret) event_->EnableReading(true);
+      co_return ret;
+    }
+  }
+
+  Task<bool> Connect(IpAddress address, SSLContext& sslContext) {
+    auto ret = co_await ConnectInternal(address);
+    if (ret) {
+      SSL* ssl = co_await Handshake(event_, sslContext, false);
+      if (!ssl) {
+        Close();
         co_return false;
       }
-      SetRemoteAddress(address);
-      sockaddr_in6 local;
-      len = sizeof(local);
-      getsockname(event_->GetFd(), reinterpret_cast<sockaddr*>(&local), &len);
-      SetLocalAddress(IpAddress(local));
-      connected_ = true;
-#ifdef COLD_ENABLE_SSL
-      if (sslEnabled_) {
-        SSL* ssl = co_await Handshake(
-            event_, SSLContext::GetGlobalDefaultInstance(), false);
-        if (!ssl) {
-          Close();
-          co_return false;
-        }
-        sslHodler_ = SSLHolder(ssl);
-      }
-#endif
+      sslHodler_ = SSLHolder(ssl);
       event_->EnableReading(true);
-      co_return true;
     }
-    co_return false;
+    co_return ret;
   }
+
+#else
+  Task<bool> Connect(IpAddress address) {
+    auto ret = co_await ConnectInternal(address);
+    if (ret) event_->EnableReading(true);
+    co_return ret;
+  }
+#endif
 
   bool TcpNoDelay(bool enable) {
     int flag = enable ? 1 : 0;
@@ -247,6 +243,32 @@ class TcpSocket : public BasicSocket {
   SSLHolder sslHodler_;
 
 #endif
+ private:
+  Task<bool> ConnectInternal(IpAddress address) {
+    assert(IsValid() && !connected_);
+    auto ret =
+        connect(event_->GetFd(), address.GetSockaddr(), address.GetSocklen());
+    if (ret == 0) co_return ret;
+    if (ret < 0 && errno != EINPROGRESS) co_return false;
+    assert(ret == -1 && errno == EINPROGRESS);
+    co_await Detail::WriteIoAwaitable(event_, true);
+    int opt = 0;
+    socklen_t len = sizeof(opt);
+    if (getsockopt(event_->GetFd(), SOL_SOCKET, SO_ERROR, &opt, &len) == 0) {
+      errno = opt;
+      if (opt != 0) {
+        co_return false;
+      }
+      SetRemoteAddress(address);
+      sockaddr_in6 local;
+      len = sizeof(local);
+      getsockname(event_->GetFd(), reinterpret_cast<sockaddr*>(&local), &len);
+      SetLocalAddress(IpAddress(local));
+      connected_ = true;
+      co_return true;
+    }
+    co_return false;
+  }
 };
 
 }  // namespace Cold
