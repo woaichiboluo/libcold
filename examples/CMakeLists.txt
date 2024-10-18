@@ -21,6 +21,9 @@ add_executable(FileTransfer net/filetransfer/Transfer.cpp)
 add_executable(TcpRelay net/socks4a/TcpRelay.cpp)
 add_executable(Socks4a net/socks4a/Socks4a.cpp)
 
-if(${BUILD_SSL_MODE})
+if(${COLD_SSL_AVAILABLE})
     add_subdirectory(net/ssl)
 endif()
+
+# net simplehttp
+add_subdirectory(net/simplehttp)
