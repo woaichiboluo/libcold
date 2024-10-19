@@ -33,9 +33,9 @@ endif()
 
 # http 
 find_library(LIBUUID uuid)
+find_package(llhttp)
 
-if(LIBUUID)
-    add_subdirectory(third_party/llhttp)
+if(LIBUUID AND llhttp_FOUND)
     set(COLD_HTTP_AVAILABLE ON)
 else()
     set(COLD_HTTP_AVAILABLE OFF)
