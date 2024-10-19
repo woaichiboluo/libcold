@@ -14,6 +14,7 @@ namespace Cold {
 
 class TcpSocket : public BasicSocket {
  public:
+  friend class TcpServer;
   // for unvalid socket
   TcpSocket() = default;
 
@@ -27,14 +28,6 @@ class TcpSocket : public BasicSocket {
     connected_ = true;
   }
 
-#ifdef COLD_ENABLE_SSL
-  // for server
-  TcpSocket(std::shared_ptr<Detail::IoEvent> event, SSL* ssl)
-      : BasicSocket(event, true), sslEnabled_(true), sslHodler_(ssl) {
-    connected_ = true;
-  }
-#endif
-
   ~TcpSocket() override = default;
 
   TcpSocket(TcpSocket&&) = default;
@@ -46,9 +39,7 @@ class TcpSocket : public BasicSocket {
       co_return co_await Connect(address,
                                  SSLContext::GetGlobalDefaultInstance());
     } else {
-      auto ret = co_await ConnectInternal(address);
-      if (ret) event_->EnableReading(true);
-      co_return ret;
+      co_return co_await ConnectInternal(address);
     }
   }
 
@@ -57,20 +48,18 @@ class TcpSocket : public BasicSocket {
     if (ret) {
       SSL* ssl = co_await Handshake(event_, sslContext, false);
       if (!ssl) {
+        event_->DisableReading();
         Close();
         co_return false;
       }
       sslHodler_ = SSLHolder(ssl);
-      event_->EnableReading(true);
     }
     co_return ret;
   }
 
 #else
   Task<bool> Connect(IpAddress address) {
-    auto ret = co_await ConnectInternal(address);
-    if (ret) event_->EnableReading(true);
-    co_return ret;
+    co_return co_await ConnectInternal(address);
   }
 #endif
 
@@ -226,8 +215,9 @@ class TcpSocket : public BasicSocket {
       auto ret = SSL_do_handshake(ssl);
       if (ret == 1) break;
       auto err = SSLError::GetSSLErrorCode(ssl, ret);
+      INFO("do handshake ret : {} err : {}", ret, err);
       if (err == SSL_ERROR_WANT_READ) {
-        co_await Detail::ReadIoAwaitable(ev, true);
+        co_await Detail::ReadIoAwaitable(ev, false);
       } else if (err == SSL_ERROR_WANT_WRITE) {
         co_await Detail::WriteIoAwaitable(ev, true);
       } else {
@@ -265,6 +255,7 @@ class TcpSocket : public BasicSocket {
       getsockname(event_->GetFd(), reinterpret_cast<sockaddr*>(&local), &len);
       SetLocalAddress(IpAddress(local));
       connected_ = true;
+      event_->EnableReading(true);
       co_return true;
     }
     co_return false;

@@ -23,9 +23,7 @@ class TcpServer {
   IpAddress GetLocalAddress() const { return localAddress_; }
 
 #ifdef COLD_ENABLE_SSL
-  void EnableSSL(SSLContext& sslContext) {
-    acceptor_.SetSSLContext(sslContext);
-  }
+  void EnableSSL(SSLContext& sslContext) { sslContext_ = &sslContext; }
 #endif
 
   void Start() {
@@ -41,7 +39,16 @@ class TcpServer {
     while (true) {
       TcpSocket socket = co_await acceptor_.Accept(pool_.GetNextIoContext());
       if (socket) {
+#ifndef COLD_ENABLE_SSL
         socket.GetIoContext().CoSpawn(OnNewConnection(std::move(socket)));
+#else
+        if (sslContext_) {
+          socket.GetIoContext().CoSpawn(
+              HandshakeOrClose(std::move(socket), sslContext_));
+        } else {
+          socket.GetIoContext().CoSpawn(OnNewConnection(std::move(socket)));
+        }
+#endif
       }
     }
   }
@@ -53,10 +60,27 @@ class TcpServer {
     co_return;
   }
 
+#ifdef COLD_ENABLE_SSL
+  virtual Task<> HandshakeOrClose(TcpSocket socket, SSLContext* sslContext) {
+    auto ssl = co_await socket.Handshake(socket.event_, *sslContext, true);
+    if (ssl) {
+      socket.sslEnabled_ = true;
+      socket.sslHodler_ = SSLHolder(ssl);
+    } else {
+      socket.Close();
+    }
+    co_await OnNewConnection(std::move(socket));
+  }
+
+#endif
+
   IpAddress localAddress_;
   IoContextPool pool_;
   Acceptor acceptor_;
   bool started_ = false;
+#ifdef COLD_ENABLE_SSL
+  SSLContext* sslContext_;
+#endif
 };
 
 }  // namespace Cold
