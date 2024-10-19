@@ -1,14 +1,10 @@
 #ifndef COLD_DETAIL_LOGCOMMON
 #define COLD_DETAIL_LOGCOMMON
 
-#ifndef FMT_HEADER_ONLY
-#define FMT_HEADER_ONLY
-#endif
-
 #include <source_location>
 
-#include "../third_party/fmt/include/fmt/format.h"
 #include "../time/Time.h"
+#include "fmt.h"
 
 namespace Cold {
 
