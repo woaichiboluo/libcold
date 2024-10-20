@@ -16,6 +16,9 @@ class Router {
   Router() = default;
   ~Router() = default;
 
+  Router(const Router&) = delete;
+  Router& operator=(const Router&) = delete;
+
   void AddServlet(std::string url, std::unique_ptr<HttpServlet> servlet) {
     assert(!url.empty() && url[0] == '/');
     Node<HttpServlet> node(std::move(url), std::move(servlet));
@@ -42,13 +45,13 @@ class Router {
     return ret;
   }
 
-  std::vector<HttpFilter> MatchFilterChain(std::string_view url) {
-    std::vector<HttpFilter> chains;
+  std::vector<HttpFilter*> MatchFilterChain(std::string_view url) {
+    std::vector<HttpFilter*> chains;
     auto views = SplitToViews(url);
     for (const auto& node : filters_) {
       auto state = UrlMatch(views, node.pattern);
       if (state == kFullMatch || state == kFuzzyMatch) {
-        chains.push_back(*node.value_);
+        chains.push_back(node.value_.get());
       }
     }
     return chains;

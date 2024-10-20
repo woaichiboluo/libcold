@@ -27,3 +27,7 @@ endif()
 
 # net simplehttp
 add_subdirectory(net/simplehttp)
+
+if(${COLD_HTTP_AVAILABLE})
+    add_subdirectory(net/http)
+endif()

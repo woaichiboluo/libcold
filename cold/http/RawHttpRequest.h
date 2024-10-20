@@ -25,7 +25,7 @@ class RawHttpRequest {
     return ret;
   }
 
-  MAP_CRUD(Header, headers_)
+  STRING_MAP_CRUD(Header, headers_)
 
   void SetMethod(std::string method) { method_ = std::move(method); }
   void SetUrl(std::string url) { url_ = url; }
