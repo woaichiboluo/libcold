@@ -215,7 +215,6 @@ class TcpSocket : public BasicSocket {
       auto ret = SSL_do_handshake(ssl);
       if (ret == 1) break;
       auto err = SSLError::GetSSLErrorCode(ssl, ret);
-      INFO("do handshake ret : {} err : {}", ret, err);
       if (err == SSL_ERROR_WANT_READ) {
         co_await Detail::ReadIoAwaitable(ev, false);
       } else if (err == SSL_ERROR_WANT_WRITE) {
