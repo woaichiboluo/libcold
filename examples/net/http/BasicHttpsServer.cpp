@@ -5,14 +5,12 @@ using namespace Cold;
 using namespace Cold::Http;
 
 int main(int argc, char** argv) {
-  //   if (argc != 3) {
-  //     fmt::println("Usage: {} <cert> <key>", argv[0]);
-  //     return 1;
-  //   }
+  if (argc != 3) {
+    fmt::println("Usage: {} <cert> <key>", argv[0]);
+    return 1;
+  }
   SSLContext sslContext;
-  //   sslContext.LoadCert(argv[1], argv[2]);
-  sslContext.LoadCert("/home/null/server_req.crt",
-                      "/home/null/server_private.key");
+  sslContext.LoadCert(argv[1], argv[2]);
   IpAddress addr(8080);
   HttpServer server(addr);
   server.EnableSSL(sslContext);
