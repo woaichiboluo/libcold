@@ -3,9 +3,9 @@
 
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 
 #include <cassert>
-#include <filesystem>
 #include <string>
 
 #include "HttpRequest.h"
@@ -16,8 +16,8 @@ namespace Cold::Http {
 
 class StaticFileBody : public HttpBody {
  public:
-  StaticFileBody(std::string requestPath)
-      : requestPath_(std::move(requestPath)), guard_([this]() {
+  StaticFileBody(std::string requestPath, struct stat st)
+      : requestPath_(std::move(requestPath)), st_(st), guard_([this]() {
           if (fd_ >= 0) close(fd_);
         }) {
     // get suffix
@@ -29,11 +29,6 @@ class StaticFileBody : public HttpBody {
     fd_ = open(requestPath_.data(), O_RDONLY | O_CLOEXEC);
     if (fd_ < 0) {
       return;
-    } else {
-      std::filesystem::path file(requestPath_);
-      std::error_code ec;
-      fileSize_ = std::filesystem::file_size(file, ec);
-      assert(ec == std::error_code());
     }
   }
 
@@ -41,25 +36,36 @@ class StaticFileBody : public HttpBody {
 
   void SetRelatedHeaders(std::map<std::string, std::string>& headers) override {
     headers["Content-Type"] = GetMimeType(suffix_);
-    headers["Content-Length"] = fmt::format("{}", fileSize_);
+    headers["Content-Length"] = fmt::format("{}", st_.st_size);
+    if (requestPath_ == "/index.html") {
+      headers["Cache-Control"] = "no-cache";
+    } else {
+      headers["Cache-Control"] = "public, max-age=3600";
+    }
+    headers["ETag"] = fmt::format("{:x}-{:x}", st_.st_ino, st_.st_mtime);
   }
 
   Task<bool> SendBody(TcpSocket& socket) override {
     assert(fd_ >= 0);
-    auto addr = mmap(nullptr, fileSize_, PROT_READ, MAP_PRIVATE, fd_, 0);
+    if (st_.st_size < 0) {
+      co_return false;
+    }
+    auto fileSize = static_cast<size_t>(st_.st_size);
+    auto addr = mmap(nullptr, fileSize, PROT_READ, MAP_PRIVATE, fd_, 0);
     if (addr == MAP_FAILED) {
       co_return false;
     }
-    ScopeGuard guard([addr, size = fileSize_] { munmap(addr, size); });
+    ScopeGuard guard([addr, size = fileSize] { munmap(addr, size); });
     auto n =
-        co_await socket.WriteN(reinterpret_cast<const char*>(addr), fileSize_);
-    co_return n == static_cast<ssize_t>(fileSize_);
+        co_await socket.WriteN(reinterpret_cast<const char*>(addr), fileSize);
+    co_return n == static_cast<ssize_t>(fileSize);
   }
 
   std::string ToRawBody() const override {
     std::string res;
     char buf[65536];
-    while (res.size() != fileSize_) {
+    if (fd_ < 0) return res;
+    while (res.size() != static_cast<size_t>(st_.st_size)) {
       auto n = read(fd_, buf, sizeof buf);
       if (n <= 0) break;
       res.append(buf, static_cast<size_t>(n));
@@ -71,8 +77,8 @@ class StaticFileBody : public HttpBody {
 
  private:
   std::string requestPath_;
+  struct stat st_;
   std::string_view suffix_;
-  size_t fileSize_ = 0;
   int fd_ = -1;
   ScopeGuard<std::function<void()> > guard_;
 };
@@ -88,30 +94,38 @@ class StaticFileServlet : public HttpServlet {
     auto requestPath =
         fmt::format("{}{}", rootPath_,
                     request.GetUrl() == "/" ? "/index.html" : request.GetUrl());
-    if (requestPath.find("..") != std::string::npos) {
-      response.SetHttpStatusCode(k403);
-    } else {
-      std::filesystem::path file(requestPath);
-      if (!std::filesystem::exists(file)) {
-        response.SetHttpStatusCode(k404);
-      } else {
-        auto status = std::filesystem::status(file);
-        auto readable =
-            (status.permissions() & std::filesystem::perms::others_read) !=
-            std::filesystem::perms::none;
-        if (std::filesystem::is_regular_file(status) && readable) {
-          auto body = MakeHttpBody<StaticFileBody>(requestPath);
-          if (!body->StaticFileAvailable()) {
-            response.SetHttpStatusCode(k500);
-          } else {
-            response.SetBody(std::move(body));
-          }
-        } else {
-          response.SetHttpStatusCode(k403);
-        }
+    do {
+      if (requestPath.find("..") != std::string::npos) {
+        response.SetHttpStatusCode(k403);
+        break;
       }
-    }
-    if (response.GetHttpStatusCode() != k200) {
+      struct stat st;
+      if (stat(requestPath.data(), &st) != 0) {
+        response.SetHttpStatusCode(errno == ENOENT ? k404 : k500);
+        break;
+      }
+      bool isRegularFile = (st.st_mode & S_IFREG) != 0;
+      bool reable = (st.st_mode & S_IROTH) != 0;
+      if (!isRegularFile || !reable) {
+        response.SetHttpStatusCode(k403);
+        break;
+      }
+      // check cache
+      auto etag = request.GetHeader("If-None-Match");
+      if (!etag.empty() &&
+          etag == fmt::format("{:x}-{:x}", st.st_ino, st.st_mtime)) {
+        response.SetHttpStatusCode(k304);
+        break;
+      }
+      auto body = MakeHttpBody<StaticFileBody>(requestPath, st);
+      if (!body->StaticFileAvailable()) {
+        response.SetHttpStatusCode(k500);
+        break;
+      }
+      response.SetBody(std::move(body));
+    } while (0);
+    if (response.GetHttpStatusCode() != k200 &&
+        response.GetHttpStatusCode() != k304) {
       auto body = std::make_unique<HtmlTextBody>();
       body->Append(GetDefaultErrorPage(response.GetHttpStatusCode()));
       response.SetBody(std::move(body));
