@@ -15,3 +15,6 @@ endif()
 
 add_executable(HttpServerWithStaticFile HttpServerWithStaticFile.cpp)
 target_link_libraries(HttpServerWithStaticFile llhttp uuid)
+
+add_executable(HttpFileService HttpFileService.cpp)
+target_link_libraries(HttpFileService llhttp uuid)
