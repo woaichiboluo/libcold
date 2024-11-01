@@ -12,6 +12,7 @@ class DefaultHttpServlet : public HttpServlet {
   ~DefaultHttpServlet() override = default;
 
   void DoService(HttpRequest& request, HttpResponse& response) override {
+    response.SetHttpStatusCode(k404);
     auto body = std::make_unique<HtmlTextBody>();
     body->Append(GetDefaultErrorPage(response.GetHttpStatusCode()));
     response.SetBody(std::move(body));
