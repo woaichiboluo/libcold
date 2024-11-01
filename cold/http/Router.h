@@ -11,6 +11,7 @@ namespace Cold::Http {
 class HttpFilter;
 class HttpServlet;
 
+template <typename T>
 class Router {
  public:
   Router() = default;
@@ -19,22 +20,16 @@ class Router {
   Router(const Router&) = delete;
   Router& operator=(const Router&) = delete;
 
-  void AddServlet(std::string url, std::unique_ptr<HttpServlet> servlet) {
+  void AddRoute(std::string url, std::shared_ptr<T> nodeValue) {
     assert(!url.empty() && url[0] == '/');
-    Node<HttpServlet> node(std::move(url), std::move(servlet));
-    servlets_.push_back(std::move(node));
+    Node node(std::move(url), std::move(nodeValue));
+    nodes_.push_back(std::move(node));
   }
 
-  void AddFilter(std::string url, std::unique_ptr<HttpFilter> filter) {
-    assert(!url.empty() && url[0] == '/');
-    Node<HttpFilter> node(std::move(url), std::move(filter));
-    filters_.push_back(std::move(node));
-  }
-
-  HttpServlet* MatchServlet(std::string_view url) {
+  T* MatchOne(std::string_view url) {
     auto views = SplitToViews(url);
-    HttpServlet* ret = nullptr;
-    for (const auto& node : servlets_) {
+    T* ret = nullptr;
+    for (const auto& node : nodes_) {
       auto state = UrlMatch(views, node.pattern);
       if (state == kFullMatch) {
         return node.value_.get();
@@ -45,10 +40,10 @@ class Router {
     return ret;
   }
 
-  std::vector<HttpFilter*> MatchFilterChain(std::string_view url) {
-    std::vector<HttpFilter*> chains;
+  std::vector<T*> MatchChains(std::string_view url) {
+    std::vector<T*> chains;
     auto views = SplitToViews(url);
-    for (const auto& node : filters_) {
+    for (const auto& node : nodes_) {
       auto state = UrlMatch(views, node.pattern);
       if (state == kFullMatch || state == kFuzzyMatch) {
         chains.push_back(node.value_.get());
@@ -87,13 +82,12 @@ class Router {
     return (i >= n && j >= m) ? state : kNotMatch;
   }
 
-  template <typename T>
   struct Node {
     Node() = default;
     ~Node() = default;
     Node(const Node&) = delete;
     Node& operator=(const Node&) = delete;
-    Node(std::string u, std::unique_ptr<T> p)
+    Node(std::string u, std::shared_ptr<T> p)
         : url(std::move(u)), pattern(SplitToViews(url)), value_(std::move(p)) {}
 
     Node(Node&& other)
@@ -111,7 +105,7 @@ class Router {
 
     std::string url;
     std::vector<std::string_view> pattern;
-    std::unique_ptr<T> value_;
+    std::shared_ptr<T> value_;
   };
 
   static std::vector<std::string_view> SplitToViews(std::string_view str) {
@@ -127,8 +121,7 @@ class Router {
     return views;
   }
 
-  std::vector<Node<HttpServlet>> servlets_;
-  std::vector<Node<HttpFilter>> filters_;
+  std::vector<Node> nodes_;
 };
 
 }  // namespace Cold::Http

@@ -24,17 +24,17 @@ class HttpServer : public TcpServer {
     context_.SetDispatcher(std::move(dispatcher));
   }
 
-  void AddServlet(std::string url, std::unique_ptr<HttpServlet> servlet) {
+  void AddServlet(std::string url, std::shared_ptr<HttpServlet> servlet) {
     context_.GetDispatcher()->AddServlet(std::move(url), std::move(servlet));
   }
 
   void AddServlet(std::string url,
                   std::function<void(HttpRequest&, HttpResponse&)> func) {
     AddServlet(std::move(url),
-               std::make_unique<FunctionServlet>(std::move(func)));
+               std::make_shared<FunctionServlet>(std::move(func)));
   }
 
-  void AddFilter(std::string url, std::unique_ptr<HttpFilter> filter) {
+  void AddFilter(std::string url, std::shared_ptr<HttpFilter> filter) {
     context_.GetDispatcher()->AddFilter(std::move(url), std::move(filter));
   }
 

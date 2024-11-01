@@ -6,37 +6,30 @@
 
 using namespace Cold::Http;
 
-class MyServlet : public HttpServlet {
- public:
-  MyServlet(int v) : v_(v) {}
-
-  int GetV() const { return v_; }
-
- private:
-  int v_;
-};
-
 TEST_CASE("basic match") {
-  Router router;
-  router.AddFilter("/hello", std::make_unique<HttpFilter>());
-  CHECK(router.MatchFilterChain("/hello").size() == 1);
-  router.AddFilter("/**", std::make_unique<HttpFilter>());
-  CHECK(router.MatchFilterChain("/hello").size() == 2);
-  router.AddFilter("/*/world", std::make_unique<HttpFilter>());
-  CHECK(router.MatchFilterChain("/dsjflkasdfjlk/world").size() == 2);
-  CHECK(router.MatchFilterChain("/").size() == 1);
-  CHECK(router.MatchFilterChain("//world").size() == 1);
+  Router<HttpFilter> router;
+  router.AddRoute("/hello", std::make_shared<HttpFilter>());
+  CHECK(router.MatchChains("/hello").size() == 1);
+  router.AddRoute("/**", std::make_shared<HttpFilter>());
+  CHECK(router.MatchChains("/hello").size() == 2);
+  router.AddRoute("/*/world", std::make_unique<HttpFilter>());
+  CHECK(router.MatchChains("/dsjflkasdfjlk/world").size() == 2);
+  CHECK(router.MatchChains("/").size() == 1);
+  CHECK(router.MatchChains("//world").size() == 1);
 
-  router.AddServlet("/hello", std::make_unique<MyServlet>(1));
-  CHECK(dynamic_cast<MyServlet*>(router.MatchServlet("/hello"))->GetV() == 1);
-  router.AddServlet("/**", std::make_unique<MyServlet>(2));
-  CHECK(dynamic_cast<MyServlet*>(router.MatchServlet("/hello"))->GetV() == 1);
-  CHECK(dynamic_cast<MyServlet*>(router.MatchServlet("/any"))->GetV() == 2);
+  Router<HttpServlet> router2;
+  auto servlet1 = std::make_shared<HttpServlet>();
+  auto servlet2 = std::make_shared<HttpServlet>();
+  auto servlet3 = std::make_shared<HttpServlet>();
+  auto servlet4 = std::make_shared<HttpServlet>();
+  router2.AddRoute("/hello", servlet1);
+  CHECK(router2.MatchOne("/hello") == servlet1.get());
+  router2.AddRoute("/**", servlet2);
+  CHECK(router2.MatchOne("/hello") == servlet1.get());
+  CHECK(router2.MatchOne("/any") == servlet2.get());
 
-  router.AddServlet("/hello/*/world", std::make_unique<MyServlet>(3));
-  router.AddServlet("/hello/hello/world", std::make_unique<MyServlet>(4));
-  CHECK(dynamic_cast<MyServlet*>(router.MatchServlet("/hello/any/world"))
-            ->GetV() == 3);
-  CHECK(dynamic_cast<MyServlet*>(router.MatchServlet("/hello/hello/world"))
-            ->GetV() == 4);
+  router2.AddRoute("/hello/*/world", servlet3);
+  router2.AddRoute("/hello/hello/world", servlet4);
+  CHECK(router2.MatchOne("/hello/any/world") == servlet3.get());
+  CHECK(router2.MatchOne("/hello/hello/world") == servlet4.get());
 }
