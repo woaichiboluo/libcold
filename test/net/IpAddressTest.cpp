@@ -56,6 +56,7 @@ TEST_CASE("test ipv6 address") {
   CHECK(addr2.GetIpPort() == "[1::111]:443");
 }
 
+// note: maybe failed depend on network
 TEST_CASE("test resolve") {
   auto addr = IpAddress::Resolve("www.baidu.com", "80");
   CHECK(addr);
