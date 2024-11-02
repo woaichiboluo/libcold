@@ -79,7 +79,7 @@ class TcpServer {
   Acceptor acceptor_;
   bool started_ = false;
 #ifdef COLD_ENABLE_SSL
-  SSLContext* sslContext_;
+  SSLContext* sslContext_ = nullptr;
 #endif
 };
 
