@@ -18,3 +18,15 @@ target_link_libraries(HttpServerWithStaticFile llhttp uuid)
 
 add_executable(HttpFileService HttpFileService.cpp)
 target_link_libraries(HttpFileService llhttp uuid)
+
+if(${COLD_SSL_AVAILABLE})
+    add_executable(WebSocketEcho WebSocketEcho.cpp)
+    target_link_libraries(WebSocketEcho llhttp uuid)
+    target_link_libraries(WebSocketEcho ${OPENSSL_LIBRARIES})
+endif()
+
+if(${COLD_SSL_AVAILABLE})
+    add_executable(WebSocketsEcho WebSocketsEcho.cpp)
+    target_link_libraries(WebSocketsEcho llhttp uuid)
+    target_link_libraries(WebSocketsEcho ${OPENSSL_LIBRARIES})
+endif()
