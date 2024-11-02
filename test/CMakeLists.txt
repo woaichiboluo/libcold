@@ -57,7 +57,7 @@ add_executable(ConfigTest util/ConfigTest.cpp)
 add_test(NAME ConfigTest COMMAND ConfigTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 
-add_executable(IntWriterTest util/IntWriterTest.cpp)
-add_test(NAME IntWriterTest COMMAND IntWriterTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+add_executable(IntHelperTest util/IntHelperTest.cpp)
+add_test(NAME IntHelperTest COMMAND IntHelperTest WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_subdirectory(http)

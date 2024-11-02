@@ -1,5 +1,5 @@
-#ifndef COLD_UTIL_INTWRITER
-#define COLD_UTIL_INTWRITER
+#ifndef COLD_UTIL_INTHELPER
+#define COLD_UTIL_INTHELPER
 
 #include <algorithm>
 
@@ -35,6 +35,30 @@ It WriteInt(T value, It b) requires(
 }
 
 template <typename T, typename It>
+size_t WriteInt(T value, std::back_insert_iterator<It> b) requires(
+    std::is_integral_v<T>) {
+  constexpr size_t size = sizeof(T);
+  using Type = uint8_t;
+  T network = value;
+  if constexpr (std::is_same_v<int16_t, T> || std::is_same_v<uint16_t, T>) {
+    network = static_cast<T>(
+        Endian::Host16ToNetwork16(static_cast<uint16_t>(network)));
+  } else if constexpr (std::is_same_v<int32_t, T> ||
+                       std::is_same_v<uint32_t, T>) {
+    network = static_cast<T>(
+        Endian::Host32ToNetwork32(static_cast<uint32_t>(network)));
+  } else if constexpr (std::is_same_v<int64_t, T> ||
+                       std::is_same_v<uint64_t, T>) {
+    network = static_cast<T>(
+        Endian::Host64ToNetwork64(static_cast<uint64_t>(network)));
+  }
+  const Type* begin = reinterpret_cast<const Type*>(&network);
+  const Type* end = begin + size;
+  std::copy(begin, end, b);
+  return size;
+}
+
+template <typename T, typename It>
 It ReadInt(T& value, It b) requires(
     std::is_integral_v<T> &&
     sizeof(typename std::iterator_traits<It>::value_type) == 1) {
@@ -67,4 +91,4 @@ T ReadInt(It b) {
 
 }  // namespace Cold
 
-#endif /* COLD_UTIL_INTWRITER */
+#endif /* COLD_UTIL_INTHELPER */

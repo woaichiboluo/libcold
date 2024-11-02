@@ -3,7 +3,7 @@
 
 #include <cassert>
 
-#include "cold/util/IntWriter.h"
+#include "cold/util/IntHelper.h"
 
 class ChatMessage {
  public:
