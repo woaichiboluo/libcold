@@ -25,9 +25,12 @@
 #include "time/Timer.h"
 
 // util
+#include "util/Base64.h"
 #include "util/Config.h"
+#include "util/Crypto.h"
 #include "util/Endian.h"
-#include "util/IntWriter.h"
+#include "util/IntHelper.h"
 #include "util/ScopeUtil.h"
+#include "util/Url.h"
 
 #endif /* COLD_COLD */

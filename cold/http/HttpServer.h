@@ -6,6 +6,10 @@
 #include "HttpRequestParser.h"
 #include "ServletContext.h"
 
+#ifdef COLD_ENABLE_SSL
+#include "websocket/WebsocketServer.h"
+#endif
+
 namespace Cold::Http {
 
 class HttpServer : public TcpServer {
@@ -14,29 +18,45 @@ class HttpServer : public TcpServer {
       : TcpServer(addr, poolSize, "HttpServer") {}
   ~HttpServer() override = default;
 
-  void SetHost(std::string host) { context_.SetHost(std::move(host)); }
+  void SetHost(std::string host) {
+    assert(!started_);
+    context_.SetHost(std::move(host));
+  }
 
   void SetDefaultServlet(std::unique_ptr<HttpServlet> servlet) {
+    assert(!started_);
     context_.SetDefaultServlet(std::move(servlet));
   }
 
   void SetDefaultDispatcher(std::unique_ptr<DisPatcherServlet> dispatcher) {
+    assert(!started_);
     context_.SetDispatcher(std::move(dispatcher));
   }
 
   void AddServlet(std::string url, std::shared_ptr<HttpServlet> servlet) {
+    assert(!started_);
     context_.GetDispatcher()->AddServlet(std::move(url), std::move(servlet));
   }
 
   void AddServlet(std::string url,
                   std::function<void(HttpRequest&, HttpResponse&)> func) {
+    assert(!started_);
     AddServlet(std::move(url),
                std::make_shared<FunctionServlet>(std::move(func)));
   }
 
   void AddFilter(std::string url, std::shared_ptr<HttpFilter> filter) {
+    assert(!started_);
     context_.GetDispatcher()->AddFilter(std::move(url), std::move(filter));
   }
+
+#ifdef COLD_ENABLE_SSL
+  void AddWsServer(std::unique_ptr<WebSocketServer> wsServer) {
+    assert(!started_);
+    auto url = wsServer->GetUrl();
+    wsRouter_.AddRoute(std::move(url), std::move(wsServer));
+  }
+#endif
 
  private:
   Task<> DoHttp(TcpSocket socket) {
@@ -56,6 +76,16 @@ class HttpServer : public TcpServer {
         response.SetHttpStatusCode(k400);
       } else if (parser.HasRequest()) {
         rawRequest = parser.TakeRequest();
+#ifdef COLD_ENABLE_SSL
+        if (WebSocketServer::CheckWhetherUpgradeRequest(rawRequest)) {
+          auto ws = wsRouter_.MatchOne(rawRequest.GetUrl());
+          if (ws) {
+            co_await ws->OnReceivedUpgradeRequest(rawRequest,
+                                                  std::move(socket));
+            co_return;
+          }
+        }
+#endif
         HttpRequest request(rawRequest);
         request.SetSevlertContext(&context_);
         response.SetHeader("Server", "Cold-HTTP");
@@ -87,7 +117,11 @@ class HttpServer : public TcpServer {
   Task<> OnNewConnection(TcpSocket socket) override {
     co_await DoHttp(std::move(socket));
   }
+
   ServletContext context_;
+#ifdef COLD_ENABLE_SSL
+  Router<WebSocketServer> wsRouter_;
+#endif
 };
 
 }  // namespace Cold::Http
